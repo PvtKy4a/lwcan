@@ -118,14 +118,14 @@ extern "C" {
 #endif
 
 /**
- * LWCAN_ISOTP == 1: Turn on ISOTP.
+ * LWCAN_RAW == 1: Turn on RAW.
  */
 #if !defined LWCAN_RAW
 #define LWCAN_RAW                   0
 #endif
 
 /*
- *  Number of simultaneously active ISOTP connections.
+ *  Number of simultaneously active RAW connections.
  */
 #if !defined CANRAW_MAX_PCB_NUM
 #define CANRAW_MAX_PCB_NUM          2
