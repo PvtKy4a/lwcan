@@ -133,7 +133,7 @@ canraw_io_state_t canraw_input(struct canif *canif, struct lwcan_frame *frame)
 {
     struct canraw_pcb *pcb;
 
-    struct canraw_pcb *prev;
+    struct canraw_pcb *prev = NULL;
 
     uint8_t canif_index;
 
