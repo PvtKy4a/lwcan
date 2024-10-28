@@ -146,14 +146,14 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint16_t lengt
 
     if (pcb->output_flow.state != ISOTP_STATE_IDLE)
     {
-        return ERROR_ISOTP_BUSY;
+        return ERROR_INPROGRESS;
     }
 
     buffer = lwcan_buffer_malloc(length);
 
     if (buffer == NULL)
     {
-        return ERROR_ISOTP_MEM;
+        return ERROR_MEMORY;
     }
 
     buffer->next = pcb->output_flow.buffer;

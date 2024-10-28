@@ -65,7 +65,7 @@ static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
     {
         if (pcb->error != NULL)
         {
-            pcb->error(pcb->callback_arg, ERROR_ISOTP_MEM);
+            pcb->error(pcb->callback_arg, ERROR_MEMORY);
         }
 
         return;
@@ -132,7 +132,7 @@ output:
     {
         if (pcb->error != NULL)
         {
-            pcb->error(pcb->callback_arg, ERROR_ISOTP_MEM);
+            pcb->error(pcb->callback_arg, ERROR_MEMORY);
         }
     }
 }
@@ -158,7 +158,7 @@ static void received_cf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
     {
         isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
 
-        error = ERROR_FRAME_SEQUENCE;
+        error = ERROR_ISOTP_FRAME_SEQUENCE;
 
         pcb->input_flow.fs = FS_OVERFLOW;
 
@@ -229,7 +229,7 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     if (pcb->output_flow.fs == FS_OVERFLOW)
     {
-        error = ERROR_FLOW_STATUS;
+        error = ERROR_ISOTP_FLOW_STATUS;
 
         goto error_exit;
     }
@@ -242,7 +242,7 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
         }
         else
         {
-            error = ERROR_FLOW_STATUS;
+            error = ERROR_ISOTP_FLOW_STATUS;
 
             goto error_exit;
         }
