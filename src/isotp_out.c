@@ -207,19 +207,12 @@ static void sent_sf(struct isotp_pcb *pcb)
 {
     uint16_t length;
 
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
     if (pcb->output_flow.state != ISOTP_STATE_TX_SF)
     {
-        pcb->output_flow.state = ISOTP_STATE_IDLE;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_FRAME_SEQUENCE);
-
-            return;
-        }
+        return;
     }
+
+    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
     length = pcb->output_flow.buffer->length;
 
@@ -236,19 +229,12 @@ static void sent_sf(struct isotp_pcb *pcb)
 
 static void sent_ff(struct isotp_pcb *pcb)
 {
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
     if (pcb->output_flow.state != ISOTP_STATE_TX_FF)
     {
-        pcb->output_flow.state = ISOTP_STATE_IDLE;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_FRAME_SEQUENCE);
-
-            return;
-        }
+        return;
     }
+
+    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
     pcb->output_flow.state = ISOTP_STATE_WAIT_FC;
 
@@ -261,19 +247,12 @@ static void sent_cf(struct isotp_pcb *pcb)
 
     int8_t cf_left;
 
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
     if (pcb->output_flow.state != ISOTP_STATE_TX_CF)
     {
-        pcb->output_flow.state = ISOTP_STATE_IDLE;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_FRAME_SEQUENCE);
-
-            return;
-        }
+        return;
     }
+
+    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
     if (pcb->output_flow.remaining_data == 0)
     {
@@ -323,6 +302,11 @@ static void sent_cf(struct isotp_pcb *pcb)
 
 static void sent_fc(struct isotp_pcb *pcb)
 {
+    if (pcb->input_flow.state != ISOTP_STATE_TX_FC)
+    {
+        return;
+    }
+
     lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
 
     if (pcb->input_flow.fs != FS_READY)
@@ -330,18 +314,6 @@ static void sent_fc(struct isotp_pcb *pcb)
         pcb->input_flow.state = ISOTP_STATE_IDLE;
 
         return;
-    }
-
-    if (pcb->input_flow.state != ISOTP_STATE_TX_FC)
-    {
-        pcb->input_flow.state = ISOTP_STATE_IDLE;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_FRAME_SEQUENCE);
-
-            return;
-        }
     }
 
     pcb->input_flow.state = ISOTP_STATE_WAIT_CF;
