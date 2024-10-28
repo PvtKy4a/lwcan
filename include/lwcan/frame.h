@@ -21,18 +21,6 @@ struct lwcan_frame
     uint8_t data[LWCAN_DLC];
 };
 
-uint8_t get_frame_type(struct lwcan_frame *frame);
-
-uint16_t get_frame_data_length(struct lwcan_frame *frame);
-
-uint8_t get_frame_serial_number(struct lwcan_frame *frame);
-
-uint8_t get_frame_flow_status(struct lwcan_frame *frame);
-
-uint8_t get_frame_block_size(struct lwcan_frame *frame);
-
-uint8_t get_frame_separation_time(struct lwcan_frame *frame);
-
 #ifdef __cplusplus
 }
 #endif
