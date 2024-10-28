@@ -265,18 +265,6 @@ lwcanerr_t canraw_set_sent_callback(struct canraw_pcb *pcb, canraw_sent_function
     return ERROR_OK;
 }
 
-lwcanerr_t canraw_set_error_callback(struct canraw_pcb *pcb, canraw_error_function error)
-{
-    if (pcb == NULL)
-    {
-        return ERROR_ARG;
-    }
-
-    pcb->error = error;
-
-    return ERROR_OK;
-}
-
 lwcanerr_t canraw_set_callback_arg(struct canraw_pcb *pcb, void *arg)
 {
     if (pcb == NULL)

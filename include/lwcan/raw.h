@@ -23,8 +23,6 @@ typedef uint8_t (*canraw_receive_function)(void *arg, struct canraw_pcb *pcb, st
 
 typedef void (*canraw_sent_function)(void *arg, struct canraw_pcb *pcb);
 
-typedef void (*canraw_error_function)(void *arg, lwcanerr_t error);
-
 struct canraw_pcb
 {
     struct canraw_pcb *next;
@@ -34,8 +32,6 @@ struct canraw_pcb
     canraw_receive_function receive;
 
     canraw_sent_function sent;
-
-    canraw_error_function error;
 
     void *callback_arg;
 
@@ -51,8 +47,6 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, struct lwcan_frame *frame);
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive);
 
 lwcanerr_t canraw_set_sent_callback(struct canraw_pcb *pcb, canraw_sent_function sent);
-
-lwcanerr_t canraw_set_error_callback(struct canraw_pcb *pcb, canraw_error_function error);
 
 lwcanerr_t canraw_set_callback_arg(struct canraw_pcb *pcb, void *arg);
 
