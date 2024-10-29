@@ -81,7 +81,7 @@ static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     if (pcb->receive != NULL)
     {
-        pcb->receive(pcb->callback_arg, pcb, pcb->input_flow.buffer, ERROR_OK);
+        pcb->receive(pcb->callback_arg, pcb, pcb->input_flow.buffer);
     }
 }
 
@@ -173,7 +173,7 @@ static void received_cf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
         if (pcb->receive != NULL)
         {
-            pcb->receive(pcb->callback_arg, pcb, pcb->input_flow.buffer, ERROR_OK);
+            pcb->receive(pcb->callback_arg, pcb, pcb->input_flow.buffer);
         }
 
         return;

@@ -19,7 +19,7 @@ extern "C" {
 
 struct isotp_pcb;
 
-typedef lwcanerr_t (*isotp_receive_function)(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer, lwcanerr_t error);
+typedef lwcanerr_t (*isotp_receive_function)(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
 typedef lwcanerr_t (*isotp_sent_function)(void *arg, struct isotp_pcb *pcb, uint16_t length);
 
