@@ -25,7 +25,7 @@ typedef enum
     ERROR_TRANSMIT_TIMEOUT = -6,
 /** Receive timeout. */
     ERROR_RECEIVE_TIMEOUT = -7,
-/** ISOTP state. */
+/** Operation in progress. */
     ERROR_INPROGRESS = -8,
 /** Flow status. */
     ERROR_ISOTP_FLOW_STATUS = -9,
