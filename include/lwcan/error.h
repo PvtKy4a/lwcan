@@ -27,10 +27,8 @@ typedef enum
     ERROR_RECEIVE_TIMEOUT = -7,
 /** Operation in progress. */
     ERROR_INPROGRESS = -8,
-/** Flow status. */
-    ERROR_ISOTP_FLOW_STATUS = -9,
-/** Frame sequence. */
-    ERROR_ISOTP_FRAME_SEQUENCE = -10
+/** Operation aborted. */
+    ERROR_ABORTED = -9
 } lwcan_error_enum_t;
 
 typedef int8_t lwcanerr_t;
