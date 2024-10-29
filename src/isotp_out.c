@@ -173,7 +173,7 @@ void isotp_output(void *arg)
 
         if (canif->output(canif, &pcb->output_flow.frame) != ERROR_OK)
         {
-            pcb->error(pcb->callback_arg, ERROR_CANIF);
+            pcb->error(pcb->callback_arg, ERROR_IF);
         }
     }
 
@@ -197,7 +197,7 @@ void isotp_output(void *arg)
 
         if (canif->output(canif, &pcb->input_flow.frame) != ERROR_OK)
         {
-            pcb->error(pcb->callback_arg, ERROR_CANIF);
+            pcb->error(pcb->callback_arg, ERROR_IF);
         }
     }
 
