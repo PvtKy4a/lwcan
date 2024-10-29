@@ -1,4 +1,5 @@
 #include "lwcan/timeouts.h"
+#include "lwcan/private/timeouts_private.h"
 #include "lwcan/error.h"
 #include "lwcan/system.h"
 #include "lwcan/options.h"
@@ -54,16 +55,16 @@ static void timeout_free(void *mem)
     ((uint8_t *)mem)[TIMEOUT_MEM_CHUNK_SIZE] = 0;
 }
 
-static bool time_less_than(uint32_t time, uint32_t compare_to)
-{
-    return (((uint32_t)(time - compare_to)) > MAX_TIMEOUT) ? true : false;
-}
-
 void lwcan_timeouts_init(void)
 {
     memset(timeout_mem_pool, 0, sizeof(timeout_mem_pool));
 
     next_timeout = NULL;
+}
+
+static bool time_less_than(uint32_t time, uint32_t compare_to)
+{
+    return (((uint32_t)(time - compare_to)) > MAX_TIMEOUT) ? true : false;
 }
 
 void lwcan_check_timeouts(void)

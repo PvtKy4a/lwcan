@@ -8,8 +8,6 @@ extern "C"
 
 #include <stdint.h>
 
-void lwcan_timeouts_init(void);
-
 void lwcan_check_timeouts(void);
 
 void lwcan_timeout(uint32_t time_ms, void (*handler)(void*), void *arg);
