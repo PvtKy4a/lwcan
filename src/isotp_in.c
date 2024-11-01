@@ -5,7 +5,6 @@
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/timeouts.h"
-#include "lwcan/memory.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -43,7 +42,7 @@ static void store_frame_data(struct isotp_flow *flow, struct lwcan_frame *frame,
     }
 }
 
-static void in_flow_output(void *arg)
+void isotp_in_flow_output(void *arg)
 {
     struct isotp_pcb *pcb;
 
@@ -81,6 +80,12 @@ static void in_flow_output(void *arg)
 
     if (canif->output(canif, &pcb->input_flow.frame) != ERROR_OK)
     {
+        lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
+
+        isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
+
+        pcb->input_flow.state = ISOTP_STATE_IDLE;
+
         if (pcb->error != NULL)
         {
             pcb->error(pcb->callback_arg, ERROR_IF);
@@ -131,6 +136,8 @@ static void received_ff(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 {
     uint16_t length;
 
+    lwcanerr_t error;
+
     struct lwcan_buffer *buffer;
 
     if (pcb->input_flow.state != ISOTP_STATE_IDLE)
@@ -145,6 +152,8 @@ static void received_ff(struct isotp_pcb *pcb, struct lwcan_frame *frame)
     if (buffer == NULL)
     {
         pcb->input_flow.fs = FS_OVERFLOW;
+
+        error = ERROR_MEMORY;
 
         goto output;
     }
@@ -168,13 +177,13 @@ output:
 
     pcb->input_flow.state = ISOTP_STATE_TX_FC;
 
-    in_flow_output(pcb);
+    isotp_in_flow_output(pcb);
 
     if (pcb->input_flow.fs != FS_READY)
     {
         if (pcb->error != NULL)
         {
-            pcb->error(pcb->callback_arg, ERROR_MEMORY);
+            pcb->error(pcb->callback_arg, error);
         }
     }
 }
@@ -244,7 +253,7 @@ static void received_cf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 send_fc:
     pcb->input_flow.state = ISOTP_STATE_TX_FC;
 
-    in_flow_output(pcb);
+    isotp_in_flow_output(pcb);
 
     if (pcb->input_flow.fs != FS_READY)
     {
@@ -269,25 +278,16 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     pcb->output_flow.fs = get_frame_flow_status(frame);
 
-    if (pcb->output_flow.fs == FS_OVERFLOW)
+    if (pcb->output_flow.fs == FS_WAIT && ISOTP_FC_WAIT_ALLOW)
+    {
+        goto wait_next;
+    }
+
+    if (pcb->output_flow.fs != FS_READY)
     {
         error = ERROR_ABORTED;
 
         goto error_exit;
-    }
-
-    if (pcb->output_flow.fs == FS_WAIT)
-    {
-        if (ISOTP_FC_WAIT_ALLOW)
-        {
-            goto wait_next;
-        }
-        else
-        {
-            error = ERROR_ABORTED;
-
-            goto error_exit;
-        }
     }
 
     pcb->output_flow.bs = get_frame_block_size(frame);
@@ -296,7 +296,7 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     pcb->output_flow.state = ISOTP_STATE_TX_CF;
 
-    in_flow_output(pcb);
+    isotp_out_flow_output(pcb);
 
     return;
 

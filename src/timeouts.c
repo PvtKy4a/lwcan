@@ -1,5 +1,4 @@
 #include "lwcan/timeouts.h"
-#include "lwcan/private/timeouts_private.h"
 #include "lwcan/error.h"
 #include "lwcan/system.h"
 #include "lwcan/options.h"
@@ -26,9 +25,9 @@ struct timeouts
     void *arg;
 };
 
-static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE];
+static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE] = {0};
 
-static struct timeouts *next_timeout;
+static struct timeouts *next_timeout = NULL;
 
 static void *timeout_malloc(void)
 {
@@ -53,13 +52,6 @@ static void timeout_free(void *mem)
     }
 
     ((uint8_t *)mem)[TIMEOUT_MEM_CHUNK_SIZE] = 0;
-}
-
-void lwcan_timeouts_init(void)
-{
-    memset(timeout_mem_pool, 0, sizeof(timeout_mem_pool));
-
-    next_timeout = NULL;
 }
 
 static bool time_less_than(uint32_t time, uint32_t compare_to)

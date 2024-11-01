@@ -5,12 +5,11 @@
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/timeouts.h"
-#include "lwcan/memory.h"
 
 #include <stdlib.h>
 #include <string.h>
 
-static void out_flow_output(void *arg)
+void isotp_out_flow_output(void *arg)
 {
     struct isotp_pcb *pcb;
 
@@ -56,6 +55,12 @@ static void out_flow_output(void *arg)
 
     if (canif->output(canif, &pcb->output_flow.frame) != ERROR_OK)
     {
+        lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
+
+        isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
+
+        pcb->output_flow.state = ISOTP_STATE_IDLE;
+
         if (pcb->error != NULL)
         {
             pcb->error(pcb->callback_arg, ERROR_IF);
@@ -103,7 +108,7 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint16_t lengt
         pcb->output_flow.state = ISOTP_STATE_TX_SF;
     }
 
-    out_flow_output(pcb);
+    isotp_out_flow_output(pcb);
 
     return ERROR_OK;
 }
@@ -190,11 +195,11 @@ static void sent_cf(struct isotp_pcb *pcb)
 
         if (pcb->output_flow.st != 0)
         {
-            lwcan_timeout(pcb->output_flow.st, out_flow_output, pcb);
+            lwcan_timeout(pcb->output_flow.st, isotp_out_flow_output, pcb);
         }
         else
         {
-            out_flow_output(pcb);
+            isotp_out_flow_output(pcb);
         }
     }
     else
@@ -250,7 +255,7 @@ void isotp_sent(struct canif *canif, struct lwcan_frame *frame)
 
     while (pcb != NULL)
     {
-        if (pcb->canif_index == canif_index && (&pcb->output_flow.frame == frame || &pcb->input_flow.frame == frame))
+        if (pcb->canif_index == canif_index && pcb->output_id == frame->id)
         {
             break;
         }
