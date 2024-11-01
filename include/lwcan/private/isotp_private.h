@@ -89,8 +89,6 @@ void isotp_init(void);
 
 void isotp_input(struct canif *canif, struct lwcan_frame *frame);
 
-void isotp_output(void *arg);
-
 void isotp_sent(struct canif *canif, struct lwcan_frame *frame);
 
 struct isotp_pcb *get_isotp_pcb_list(void);
@@ -106,6 +104,8 @@ uint8_t get_frame_flow_status(struct lwcan_frame *frame);
 uint8_t get_frame_block_size(struct lwcan_frame *frame);
 
 uint8_t get_frame_separation_time(struct lwcan_frame *frame);
+
+void isotp_fill_frame(struct isotp_flow *flow, uint8_t frame_type, uint32_t id, bool extended_id);
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer);
 
