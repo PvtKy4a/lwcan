@@ -26,8 +26,6 @@ struct canif
 
     uint8_t num;
 
-    uint8_t if_index;
-
     canif_input_function input;
 
     canif_output_function output;
@@ -35,7 +33,7 @@ struct canif
     canif_sent_function sent;
 };
 
-lwcanerr_t canif_add(struct canif *canif, uint8_t if_index, canif_init_function init, canif_input_function input, canif_sent_function sent);
+lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_function input, canif_sent_function sent);
 
 lwcanerr_t canif_remove(struct canif *canif);
 

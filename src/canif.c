@@ -13,7 +13,7 @@ static struct canif *canif_list = NULL;
 
 static uint8_t canif_num = 0;
 
-lwcanerr_t canif_add(struct canif *canif, uint8_t if_index, canif_init_function init, canif_input_function input, canif_sent_function sent)
+lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_function input, canif_sent_function sent)
 {
     struct canif *canif_temp;
 
@@ -31,8 +31,6 @@ lwcanerr_t canif_add(struct canif *canif, uint8_t if_index, canif_init_function 
     canif->sent = sent;
 
     canif->num = canif_num;
-
-    canif->if_index = if_index;
 
     if (init(canif) != ERROR_OK)
     {
