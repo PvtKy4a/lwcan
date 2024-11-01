@@ -123,7 +123,7 @@ lwcanerr_t canraw_close(struct canraw_pcb *pcb)
 
     canraw_pcb_free(pcb);
 
-    canraw_pcb_num += 1;
+    canraw_pcb_num -= 1;
 
 exit:
     return ret;
