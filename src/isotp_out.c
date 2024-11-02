@@ -13,13 +13,6 @@ static void sent_sf(struct isotp_pcb *pcb)
 {
     uint16_t length;
 
-    if (pcb->output_flow.state != ISOTP_STATE_TX_SF)
-    {
-        return;
-    }
-
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
     length = pcb->output_flow.buffer->length;
 
     isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
@@ -52,13 +45,6 @@ static void sent_cf(struct isotp_pcb *pcb)
     uint16_t length;
 
     int8_t cf_left;
-
-    if (pcb->output_flow.state != ISOTP_STATE_TX_CF)
-    {
-        return;
-    }
-
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
     if (pcb->output_flow.remaining_data == 0)
     {
@@ -103,16 +89,14 @@ static void sent_cf(struct isotp_pcb *pcb)
 
 static void sent_fc(struct isotp_pcb *pcb)
 {
-    if (pcb->input_flow.state != ISOTP_STATE_TX_FC)
-    {
-        return;
-    }
-
-    lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
-
     if (pcb->input_flow.fs != FS_READY)
     {
         pcb->input_flow.state = ISOTP_STATE_IDLE;
+
+        if (pcb->error != NULL)
+        {
+            pcb->error(pcb->callback_arg, ERROR_ABORTED);
+        }
 
         return;
     }
