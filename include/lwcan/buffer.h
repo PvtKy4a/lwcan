@@ -8,7 +8,6 @@ extern "C" {
 #include "lwcan/error.h"
 
 #include <stdint.h>
-#include <stdbool.h>
 
 struct lwcan_buffer
 {
@@ -19,9 +18,9 @@ struct lwcan_buffer
     uint16_t length;
 };
 
-struct lwcan_buffer *lwcan_buffer_malloc(uint16_t length);
+struct lwcan_buffer *lwcan_buffer_new(uint16_t length);
 
-lwcanerr_t lwcan_buffer_free(struct lwcan_buffer *buffer);
+void lwcan_buffer_delete(struct lwcan_buffer *buffer);
 
 lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint16_t length);
 

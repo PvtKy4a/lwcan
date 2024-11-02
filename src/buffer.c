@@ -5,51 +5,41 @@
 
 #include <string.h>
 
-struct lwcan_buffer *lwcan_buffer_malloc(uint16_t length)
+struct lwcan_buffer *lwcan_buffer_new(uint16_t length)
 {
     struct lwcan_buffer *buffer;
 
     if (length == 0)
     {
-        goto error_mem;
+        return NULL;
     }
 
     buffer = (struct lwcan_buffer *)lwcan_malloc(sizeof(struct lwcan_buffer));
 
     if (buffer == NULL)
     {
-        goto error_mem;
+        return NULL;
     }
 
-    buffer->payload = lwcan_malloc(length);
+    buffer->payload = (uint8_t *)lwcan_malloc(length);
 
     if (buffer->payload == NULL)
     {
         lwcan_free(buffer);
 
-        goto error_mem;
+        return NULL;
     }
 
     buffer->length = length;
 
     return buffer;
-
-error_mem:
-    return NULL;
 }
 
-lwcanerr_t lwcan_buffer_free(struct lwcan_buffer *buffer)
+void lwcan_buffer_delete(struct lwcan_buffer *buffer)
 {
-    if (buffer == NULL || buffer->payload == NULL)
-    {
-        return ERROR_ARG;
-    }
-
     lwcan_free(buffer->payload);
 
     lwcan_free(buffer);
-
-    return ERROR_OK;
 }
 
 lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint16_t length)

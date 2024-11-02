@@ -6,7 +6,6 @@
 #include "lwcan/private/raw_private.h"
 #include "lwcan/timeouts.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #define CANRAW_PCB_MEM_CHUNK_SIZE sizeof(struct canraw_pcb)

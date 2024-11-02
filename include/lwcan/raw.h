@@ -10,12 +10,10 @@ extern "C" {
 #if LWCAN_RAW /* don't build if not configured for use in lwcan_options.h */
 
 #include "lwcan/error.h"
-#include "lwcan/buffer.h"
 #include "lwcan/frame.h"
 #include "lwcan/canif.h"
 
 #include <stdint.h>
-#include <stdbool.h>
 
 struct canraw_pcb;
 

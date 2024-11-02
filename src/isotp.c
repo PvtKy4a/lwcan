@@ -364,7 +364,7 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
     {
         flow->buffer = flow->buffer->next;
 
-        lwcan_buffer_free(buffer);
+        lwcan_buffer_delete(buffer);
     }
     else
     {
@@ -374,7 +374,7 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
             {
                 buffer_temp->next = buffer->next;
 
-                lwcan_buffer_free(buffer);
+                lwcan_buffer_delete(buffer);
 
                 break;
             }

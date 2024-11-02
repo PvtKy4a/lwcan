@@ -93,7 +93,9 @@ void isotp_out_flow_output(void *arg);
 
 void isotp_in_flow_output(void *arg);
 
-void isotp_sent(struct canif *canif, struct lwcan_frame *frame);
+void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type);
+
+//void isotp_sent(struct canif *canif, struct lwcan_frame *frame);
 
 struct isotp_pcb *get_isotp_pcb_list(void);
 

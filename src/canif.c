@@ -13,7 +13,7 @@ static struct canif *canif_list = NULL;
 
 static uint8_t canif_num = 0;
 
-lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_function input, canif_sent_function sent)
+lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_function input)
 {
     struct canif *canif_temp;
 
@@ -27,8 +27,6 @@ lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_
     memset(canif, 0, sizeof(struct canif));
 
     canif->input = input;
-
-    canif->sent = sent;
 
     canif->num = canif_num;
 
@@ -146,31 +144,6 @@ lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
     {
 #if LWCAN_ISOTP
         isotp_input(canif, frame);
-#endif
-    }
-
-    return ERROR_OK;
-}
-
-lwcanerr_t canif_sent(struct canif *canif, struct lwcan_frame *frame)
-{
-#if LWCAN_RAW
-    canraw_io_state_t raw_status;
-#endif
-
-    if (canif == NULL || frame == NULL)
-    {
-        return ERROR_ARG;
-    }
-
-#if LWCAN_RAW
-    raw_status = canraw_sent(canif, frame);
-
-    if (raw_status != RAW_IO_SENT)
-#endif
-    {
-#if LWCAN_ISOTP
-        isotp_sent(canif, frame);
 #endif
     }
 
