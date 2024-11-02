@@ -83,13 +83,6 @@ extern "C" {
 #endif
 
 /*
- *  Time for transmission of the CAN frame on the receiver side in milliseconds (see ISO 15765-2)
- */
-#if !defined ISOTP_N_AR
-#define ISOTP_N_AR                  1000
-#endif
-
-/*
  *  Time until transmission of the next flow control frame in milliseconds (see ISO 15765-2)
  */
 #if !defined ISOTP_N_BR
