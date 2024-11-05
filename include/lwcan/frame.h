@@ -21,6 +21,10 @@ struct lwcan_frame
     uint8_t data[LWCAN_DLC];
 };
 
+uint8_t lwcan_dlc_to_length(uint8_t dlc);
+
+uint8_t lwcan_length_to_dlc(uint8_t length);
+
 #ifdef __cplusplus
 }
 #endif
