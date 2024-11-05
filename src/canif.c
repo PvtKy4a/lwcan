@@ -13,7 +13,7 @@ static struct canif *canif_list = NULL;
 
 static uint8_t canif_num = 0;
 
-lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_function input)
+lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function init, canif_input_function input)
 {
     struct canif *canif_temp;
 
@@ -25,6 +25,8 @@ lwcanerr_t canif_add(struct canif *canif, canif_init_function init, canif_input_
     }
 
     memset(canif, 0, sizeof(struct canif));
+
+    memcpy(canif->name, name, sizeof(canif->name));
 
     canif->input = input;
 
@@ -128,7 +130,7 @@ exit:
 lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
 {
 #if LWCAN_RAW
-    canraw_io_state_t raw_status;
+    canraw_input_state_t raw_status;
 #endif
 
     if (canif == NULL || frame == NULL)
@@ -139,7 +141,7 @@ lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
 #if LWCAN_RAW
     raw_status = canraw_input(canif, frame);
 
-    if (raw_status != RAW_IO_EATEN)
+    if (raw_status != RAW_INPUT_EATEN)
 #endif
     {
 #if LWCAN_ISOTP
@@ -150,21 +152,62 @@ lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
     return ERROR_OK;
 }
 
-uint8_t canif_get_index(struct canif *canif)
+lwcanerr_t canif_get_name(struct canif *canif, char *name)
 {
-    uint8_t ret;
-
     if (canif == NULL)
     {
-        ret = 0;
-
-        goto exit;
+        return ERROR_ARG;
     }
 
-    ret = canif->num + 1;
+    memcpy(name, canif->name, sizeof(canif->name));
 
-exit:
-    return ret;
+    return ERROR_OK;
+}
+
+struct canif *canif_get_by_name(const char *name)
+{
+    struct canif *canif;
+
+    if (name == NULL)
+    {
+        return NULL;
+    }
+
+    for (canif = canif_list; canif != NULL; canif = canif->next)
+    {
+        if (memcmp(canif->name, name, sizeof(canif->name)) == 0)
+        {
+            break;
+        }
+    }
+
+    return canif;
+}
+
+uint8_t canif_name_to_index(const char *name)
+{
+    struct canif *canif;
+
+    canif = canif_get_by_name(name);
+
+    return canif_get_index(canif);
+}
+
+lwcanerr_t canif_index_to_name(uint8_t index, char *name)
+{
+    struct canif *canif = canif_get_by_index(index);
+
+    return canif_get_name(canif, name);
+}
+
+uint8_t canif_get_index(struct canif *canif)
+{
+    if (canif == NULL)
+    {
+        return 0;
+    }
+
+    return (canif->num + 1);
 }
 
 struct canif *canif_get_by_index(uint8_t index)
@@ -173,9 +216,7 @@ struct canif *canif_get_by_index(uint8_t index)
 
     if (index == 0)
     {
-        canif = NULL;
-
-        goto exit;
+        return NULL;
     }
 
     for (canif = canif_list; canif != NULL; canif = canif->next)
@@ -186,6 +227,5 @@ struct canif *canif_get_by_index(uint8_t index)
         }
     }
 
-exit:
     return canif;
 }

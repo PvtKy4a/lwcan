@@ -51,25 +51,25 @@ void isotp_init(void)
     isotp_pcb_list = NULL;
 }
 
-struct isotp_pcb *isotp_new(struct canif *canif, uint32_t output_id, uint32_t input_id, bool extended_id)
+struct isotp_pcb *isotp_new(uint8_t canif_index, uint32_t output_id, uint32_t input_id, bool extended_id)
 {
     struct isotp_pcb *pcb;
 
-    if (canif == NULL || isotp_pcb_num >= ISOTP_MAX_PCB_NUM)
+    if (canif_index == 0 || isotp_pcb_num >= ISOTP_MAX_PCB_NUM)
     {
-        goto error;
+        return NULL;
     }
 
     pcb = (struct isotp_pcb *)isotp_pcb_malloc();
 
     if (pcb == NULL)
     {
-        goto error;
+        return NULL;
     }
 
     memset(pcb, 0, sizeof(struct isotp_pcb));
 
-    pcb->canif_index = canif_get_index(canif);
+    pcb->canif_index = canif_index;
 
     pcb->next = isotp_pcb_list;
 
@@ -84,9 +84,34 @@ struct isotp_pcb *isotp_new(struct canif *canif, uint32_t output_id, uint32_t in
     isotp_pcb_num += 1;
 
     return pcb;
+}
 
-error:
-    return NULL;
+lwcanerr_t isotp_bind(struct isotp_pcb *pcb, uint8_t canif_index)
+{
+    if (pcb == NULL ||canif_index == 0)
+    {
+        return ERROR_ARG;
+    }
+
+    pcb->canif_index = canif_index;
+
+    return ERROR_OK;
+}
+
+lwcanerr_t isotp_set_address(struct isotp_pcb *pcb, uint32_t output_id, uint32_t input_id, bool extended_id)
+{
+    if (pcb == NULL)
+    {
+        return ERROR_ARG;
+    }
+
+    pcb->output_id = output_id;
+
+    pcb->input_id = input_id;
+
+    pcb->extended_id = extended_id;
+
+    return ERROR_OK;
 }
 
 lwcanerr_t isotp_close(struct isotp_pcb *pcb)

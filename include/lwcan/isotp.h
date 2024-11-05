@@ -12,7 +12,6 @@ extern "C" {
 #include "lwcan/error.h"
 #include "lwcan/buffer.h"
 #include "lwcan/frame.h"
-#include "lwcan/canif.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -69,7 +68,11 @@ struct isotp_pcb
     struct isotp_flow input_flow;
 };
 
-struct isotp_pcb *isotp_new(struct canif *canif, uint32_t output_id, uint32_t input_id, bool extended_id);
+struct isotp_pcb *isotp_new(uint8_t canif_index, uint32_t output_id, uint32_t input_id, bool extended_id);
+
+lwcanerr_t isotp_bind(struct isotp_pcb *pcb, uint8_t canif_index);
+
+lwcanerr_t isotp_set_address(struct isotp_pcb *pcb, uint32_t output_id, uint32_t input_id, bool extended_id);
 
 lwcanerr_t isotp_close(struct isotp_pcb *pcb);
 

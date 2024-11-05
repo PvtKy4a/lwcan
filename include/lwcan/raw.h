@@ -11,15 +11,12 @@ extern "C" {
 
 #include "lwcan/error.h"
 #include "lwcan/frame.h"
-#include "lwcan/canif.h"
 
 #include <stdint.h>
 
 struct canraw_pcb;
 
 typedef uint8_t (*canraw_receive_function)(void *arg, struct canraw_pcb *pcb, struct lwcan_frame *frame);
-
-typedef void (*canraw_sent_function)(void *arg, struct canraw_pcb *pcb);
 
 struct canraw_pcb
 {
@@ -29,22 +26,20 @@ struct canraw_pcb
 
     canraw_receive_function receive;
 
-    canraw_sent_function sent;
-
     void *callback_arg;
 
     struct lwcan_frame frame;
 };
 
-struct canraw_pcb *canraw_new(struct canif *canif);
+struct canraw_pcb *canraw_new(uint8_t canif_index);
+
+lwcanerr_t canraw_bind(struct canraw_pcb *pcb, uint8_t canif_index);
 
 lwcanerr_t canraw_close(struct canraw_pcb *pcb);
 
 lwcanerr_t canraw_send(struct canraw_pcb *pcb, struct lwcan_frame *frame);
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive);
-
-lwcanerr_t canraw_set_sent_callback(struct canraw_pcb *pcb, canraw_sent_function sent);
 
 lwcanerr_t canraw_set_callback_arg(struct canraw_pcb *pcb, void *arg);
 
