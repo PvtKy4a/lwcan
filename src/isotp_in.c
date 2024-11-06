@@ -9,36 +9,61 @@
 #include <stdlib.h>
 #include <string.h>
 
-static void store_frame_data(struct isotp_flow *flow, struct lwcan_frame *frame, uint8_t frame_type)
+static void store_sf_data(struct isotp_flow *flow, struct lwcan_frame *frame)
 {
-    switch (frame_type)
+    uint8_t offset;
+
+    if ((frame->data[FD_SF_FLAG_OFFSET] & FD_SF_FLAG_MASK) != FD_SF_FLAG)
     {
-    case SF:
-        lwcan_buffer_copy_to(flow->buffer, frame->data + SF_DATA_OFFSET, flow->remaining_data);
-        break;
+        offset = SF_DATA_OFFSET;
+    }
+    else
+    {
+        offset = FD_SF_DATA_OFFSET;
+    }
 
-    case FF:
-        lwcan_buffer_copy_to(flow->buffer, frame->data + FF_DATA_OFFSET, FF_DATA_LENGTH);
-        flow->remaining_data -= FF_DATA_LENGTH;
-        break;
+    lwcan_buffer_copy_to(flow->buffer, frame->data + offset, flow->remaining_data);
+}
 
-    case CF:
-        if (flow->remaining_data < CF_DATA_LENGTH)
-        {
-            lwcan_buffer_copy_to_offset(flow->buffer, frame->data + CF_DATA_OFFSET, flow->remaining_data, flow->buffer->length - flow->remaining_data);
+static void store_ff_data(struct isotp_flow *flow, struct lwcan_frame *frame)
+{
+    uint8_t offset;
 
-            flow->remaining_data -= flow->remaining_data;
-        }
-        else
-        {
-            lwcan_buffer_copy_to_offset(flow->buffer, frame->data + CF_DATA_OFFSET, CF_DATA_LENGTH, flow->buffer->length - flow->remaining_data);
+    uint8_t length = lwcan_dlc_to_length(frame->dlc);
 
-            flow->remaining_data -= CF_DATA_LENGTH;
-        }
-        break;
+    if ((frame->data[FD_FF_FLAG_OFFSET] & FD_FF_FLAG_MASK) != FD_FF_FLAG)
+    {
+        offset = FF_DATA_OFFSET;
+    }
+    else
+    {
+        offset = FD_FF_DATA_OFFSET;
+    }
 
-    default:
-        break;
+    lwcan_buffer_copy_to(flow->buffer, frame->data + offset, (length - offset));
+
+    flow->remaining_data -= (length - offset);
+}
+
+static void store_cf_data(struct isotp_flow *flow, struct lwcan_frame *frame)
+{
+    uint8_t offset;
+
+    uint8_t length = lwcan_dlc_to_length(frame->dlc);
+
+    offset = CF_DATA_OFFSET;
+
+    if (flow->remaining_data < (uint8_t)(length - offset))
+    {
+        lwcan_buffer_copy_to_offset(flow->buffer, frame->data + offset, flow->remaining_data, (flow->buffer->length - flow->remaining_data));
+
+        flow->remaining_data -= flow->remaining_data;
+    }
+    else
+    {
+        lwcan_buffer_copy_to_offset(flow->buffer, frame->data + offset, (length - offset), flow->buffer->length - flow->remaining_data);
+
+        flow->remaining_data -= (length - offset);
     }
 }
 
@@ -69,14 +94,13 @@ void isotp_in_flow_output(void *arg)
     switch (pcb->input_flow.state)
     {
         case ISOTP_STATE_TX_FC:
+            isotp_fill_fc(&pcb->input_flow, pcb->output_id, pcb->extended_id);
             frame_type = FC;
             break;
 
         default:
             return;
     }
-
-    isotp_fill_frame(&pcb->input_flow, frame_type, pcb->output_id, pcb->extended_id);
 
     ret = canif->output(canif, &pcb->input_flow.frame);
 
@@ -101,7 +125,7 @@ void isotp_in_flow_output(void *arg)
 
 static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 {
-    uint16_t length;
+    uint8_t length;
 
     struct lwcan_buffer *buffer;
 
@@ -110,7 +134,7 @@ static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
         return;
     }
 
-    length = get_frame_data_length(frame);
+    length = isotp_get_sf_data_length(frame);
 
     buffer = lwcan_buffer_new(length);
 
@@ -130,7 +154,7 @@ static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     pcb->input_flow.remaining_data = length;
 
-    store_frame_data(&pcb->input_flow, frame, SF);
+    store_sf_data(&pcb->input_flow, frame);
 
     if (pcb->receive != NULL)
     {
@@ -140,7 +164,7 @@ static void received_sf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
 static void received_ff(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 {
-    uint16_t length;
+    uint32_t length;
 
     struct lwcan_buffer *buffer;
 
@@ -149,7 +173,7 @@ static void received_ff(struct isotp_pcb *pcb, struct lwcan_frame *frame)
         return;
     }
 
-    length = get_frame_data_length(frame);
+    length = isotp_get_ff_data_length(frame);
 
     buffer = lwcan_buffer_new(length);
 
@@ -171,7 +195,7 @@ static void received_ff(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     pcb->input_flow.remaining_data = length;
 
-    store_frame_data(&pcb->input_flow, frame, FF);
+    store_ff_data(&pcb->input_flow, frame);
 
     pcb->input_flow.cf_sn = 1;
 
@@ -213,7 +237,7 @@ static void received_cf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
         goto output;
     }
 
-    store_frame_data(&pcb->input_flow, frame, CF);
+    store_cf_data(&pcb->input_flow, frame);
 
     if (pcb->input_flow.remaining_data == 0)
     {

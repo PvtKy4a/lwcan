@@ -10,6 +10,14 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
+#define CAN_MAX_DLC 8
+
+#define CAN_MAX_LENGTH 8
+
+#define CANFD_MAX_DLC 15
+
+#define CANFD_MAX_LENGTH 64
+
 struct lwcan_frame
 {
     uint32_t id;
@@ -18,7 +26,7 @@ struct lwcan_frame
 
     uint8_t dlc;
 
-    uint8_t data[LWCAN_DLC];
+    uint8_t data[CANFD_MAX_LENGTH];
 };
 
 uint8_t lwcan_dlc_to_length(uint8_t dlc);

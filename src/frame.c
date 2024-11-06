@@ -1,9 +1,5 @@
 #include "lwcan/frame.h"
 
-#define CANFD_MAX_DLC 15
-
-#define CANFD_MAX_DLEN 64
-
 static const uint8_t dlc_to_length[] = {
 	0, 1, 2, 3, 4, 5, 6, 7,
 	8, 12, 16, 20, 24, 32, 48, 64
@@ -29,7 +25,7 @@ uint8_t lwcan_dlc_to_length(uint8_t dlc)
 
 uint8_t lwcan_length_to_dlc(uint8_t length)
 {
-    if (length > CANFD_MAX_DLEN)
+    if (length > CANFD_MAX_LENGTH)
     {
         return CANFD_MAX_DLC;
     }	

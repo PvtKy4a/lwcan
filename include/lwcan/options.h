@@ -21,18 +21,18 @@ extern "C" {
 #define LWCAN_MEM_SIZE              512
 #endif
 
-/*
- *  The Data Length Code representing the number of bytes in the data field
- */
-#if !defined LWCAN_DLC
-#define LWCAN_DLC                   8
-#endif
-
 /**
  * LWCAN_ISOTP == 1: Turn on ISOTP.
  */
 #if !defined LWCAN_ISOTP
 #define LWCAN_ISOTP                 1
+#endif
+
+/**
+ * Minimum Data Length Code in frame
+ */
+#if !defined ISOTP_MIN_DLC
+#define ISOTP_MIN_DLC               8
 #endif
 
 /*

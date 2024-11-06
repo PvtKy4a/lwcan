@@ -23,27 +23,42 @@ extern "C" {
 #define FRAME_TYPE_OFFSET   0
 #define FRAME_TYPE_MASK     0xF0
 
-#define INCORRECT_FRAME_TYPE 0xFF
+#define SF                  0x00    /** Single frame */
+#define SF_DL_OFFSET        0       /** Single frame data length offset */
+#define SF_DL_MASK          0x0F    /** Single frame data length mask */
+#define SF_DATA_OFFSET      1       /** Single frame data offset */
+#define FD_SF_FLAG          0       /** CAN FD single frame flag */
+#define FD_SF_FLAG_OFFSET   0       /** CAN FD single frame flag offset */
+#define FD_SF_FLAG_MASK     0x0F    /** CAN FD single frame flag mask */
+#define FD_SF_DL_OFFSET     1       /** CAN FD single frame data length offset */
+#define FD_SF_DL_MASK       0xFF    /** CAN FD single frame data length mask */
+#define FD_SF_DATA_OFFSET   2       /** CAN FD single frame data offset */
+/////////////
+#define SF_DATA_LENGTH      7       /** Single frame data length */
+/////////////
 
-#define SF                0x00  /** Single frame */
-#define SF_DL_OFFSET      0     /** Single frame data length offset */
-#define SF_DL_MASK        0x0F  /** Single frame data length mask */
-#define SF_DATA_OFFSET    1     /** Single frame data offset */
-#define SF_DATA_LENGTH    7     /** Single frame data length */
-
-#define FF                 0x10 /** First frame */
-#define FF_DL_HI_OFFSET    0    /** First frame data length hi offset */
-#define FF_DL_HI_MASK      0x0F /** First frame data length hi mask */
-#define FF_DL_LO_OFFSET    1    /** First frame data length lo offset */
-#define FF_DL_LO_MASK      0xFF /** First frame data length LO mask */
-#define FF_DATA_OFFSET     2    /** First frame data offset */
+#define FF                  0x10    /** First frame */
+#define FF_DL_HI_OFFSET     0       /** First frame data length hi offset */
+#define FF_DL_HI_MASK       0x0F    /** First frame data length hi mask */
+#define FF_DL_LO_OFFSET     1       /** First frame data length lo offset */
+#define FF_DL_LO_MASK       0xFF    /** First frame data length LO mask */
+#define FF_DATA_OFFSET      2       /** First frame data offset */
+#define FD_FF_FLAG          0       /** CAN FD first frame flag */
+#define FD_FF_FLAG_OFFSET   1       /** CAN FD first frame flag offset */
+#define FD_FF_FLAG_MASK     0xFF    /** CAN FD first frame flag mask */
+#define FD_FF_DL_OFFSET     2       /** CAN FD first frame data length offset */
+#define FD_FF_DATA_OFFSET   6       /** CAN FD first frame data offset */
+//////////////////////
 #define FF_DATA_LENGTH     6    /** First frame data length */
+//////////////////////
 
 #define CF               0x20   /** Consecutive frame */
 #define CF_SN_OFFSET     0      /** Consecutive frame serial number offset */
 #define CF_SN_MASK       0x0F   /** Consecutive frame serial number mask */
 #define CF_DATA_OFFSET   1      /** Consecutive frame data offset */
+/////////////////
 #define CF_DATA_LENGTH   7      /** Consecutive frame data length */
+/////////////////
 
 #define FC              0x30    /** Flow control frame */
 #define FC_FS_OFFSET    0       /** Flow control frame flow status offset */
@@ -101,7 +116,9 @@ struct isotp_pcb *get_isotp_pcb_list(void);
 
 uint8_t get_frame_type(struct lwcan_frame *frame);
 
-uint16_t get_frame_data_length(struct lwcan_frame *frame);
+uint8_t isotp_get_sf_data_length(struct lwcan_frame *frame);
+
+uint32_t isotp_get_ff_data_length(struct lwcan_frame *frame);
 
 uint8_t get_frame_serial_number(struct lwcan_frame *frame);
 
@@ -111,7 +128,13 @@ uint8_t get_frame_block_size(struct lwcan_frame *frame);
 
 uint8_t get_frame_separation_time(struct lwcan_frame *frame);
 
-void isotp_fill_frame(struct isotp_flow *flow, uint8_t frame_type, uint32_t id, bool extended_id);
+void isotp_fill_sf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
+
+void isotp_fill_ff(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
+
+void isotp_fill_cf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
+
+void isotp_fill_fc(struct isotp_flow *flow, uint32_t id, bool extended_id);
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer);
 

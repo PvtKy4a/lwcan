@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-struct lwcan_buffer *lwcan_buffer_new(uint16_t length)
+struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 {
     struct lwcan_buffer *buffer;
 
@@ -42,7 +42,7 @@ void lwcan_buffer_delete(struct lwcan_buffer *buffer)
     lwcan_free(buffer);
 }
 
-lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint16_t length)
+lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length)
 {
     if (buffer == NULL || source == NULL || length == 0)
     {
@@ -54,7 +54,7 @@ lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *sour
     return ERROR_OK;
 }
 
-lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_t *source, uint16_t length, uint16_t offset)
+lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length, uint32_t offset)
 {
     if (buffer == NULL || source == NULL || length == 0)
     {
@@ -66,7 +66,7 @@ lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_
     return ERROR_OK;
 }
 
-lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distination, uint16_t length)
+lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length)
 {
     if (buffer == NULL || distination == NULL || length == 0)
     {
@@ -78,7 +78,7 @@ lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distinat
     return ERROR_OK;
 }
 
-lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *distination, uint16_t length, uint16_t offset)
+lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length, uint32_t offset)
 {
     if (buffer == NULL || distination == NULL || length == 0)
     {

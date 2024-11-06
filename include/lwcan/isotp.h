@@ -32,7 +32,7 @@ struct isotp_flow
 
     struct lwcan_buffer *buffer;
 
-    uint16_t remaining_data;
+    uint32_t remaining_data;
 
     uint8_t cf_sn;  /** Consecutive frame serial number */
 
@@ -63,12 +63,14 @@ struct isotp_pcb
 
     bool extended_id;
 
+    bool can_fd;
+
     struct isotp_flow output_flow;
 
     struct isotp_flow input_flow;
 };
 
-struct isotp_pcb *isotp_new(uint8_t canif_index, uint32_t output_id, uint32_t input_id, bool extended_id);
+struct isotp_pcb *isotp_new(uint8_t canif_index, uint32_t output_id, uint32_t input_id, bool extended_id, bool can_fd);
 
 lwcanerr_t isotp_bind(struct isotp_pcb *pcb, uint8_t canif_index);
 
@@ -76,7 +78,7 @@ lwcanerr_t isotp_set_address(struct isotp_pcb *pcb, uint32_t output_id, uint32_t
 
 lwcanerr_t isotp_close(struct isotp_pcb *pcb);
 
-lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint16_t length);
+lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t length);
 
 lwcanerr_t isotp_received(struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
