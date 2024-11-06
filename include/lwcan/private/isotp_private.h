@@ -103,19 +103,19 @@ void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type);
 
 struct isotp_pcb *get_isotp_pcb_list(void);
 
-uint8_t get_frame_type(struct lwcan_frame *frame);
+uint8_t isotp_get_frame_type(struct lwcan_frame *frame);
 
 uint8_t isotp_get_sf_data_length(struct lwcan_frame *frame);
 
 uint32_t isotp_get_ff_data_length(struct lwcan_frame *frame);
 
-uint8_t get_frame_serial_number(struct lwcan_frame *frame);
+uint8_t isotp_get_frame_serial_number(struct lwcan_frame *frame);
 
-uint8_t get_frame_flow_status(struct lwcan_frame *frame);
+uint8_t isotp_get_frame_flow_status(struct lwcan_frame *frame);
 
-uint8_t get_frame_block_size(struct lwcan_frame *frame);
+uint8_t isotp_get_frame_block_size(struct lwcan_frame *frame);
 
-uint8_t get_frame_separation_time(struct lwcan_frame *frame);
+uint8_t isotp_get_frame_separation_time(struct lwcan_frame *frame);
 
 void isotp_fill_sf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
 

@@ -226,7 +226,7 @@ static void received_cf(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
 
-    sn = get_frame_serial_number(frame);
+    sn = isotp_get_frame_serial_number(frame);
 
     if (pcb->input_flow.cf_sn != sn)
     {
@@ -288,7 +288,7 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
 
     lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
-    pcb->output_flow.fs = get_frame_flow_status(frame);
+    pcb->output_flow.fs = isotp_get_frame_flow_status(frame);
 
     if (pcb->output_flow.fs == FS_WAIT && ISOTP_FC_WAIT_ALLOW)
     {
@@ -313,9 +313,9 @@ static void received_fc(struct isotp_pcb *pcb, struct lwcan_frame *frame)
         return;
     }
 
-    pcb->output_flow.bs = get_frame_block_size(frame);
+    pcb->output_flow.bs = isotp_get_frame_block_size(frame);
 
-    pcb->output_flow.st = get_frame_separation_time(frame);
+    pcb->output_flow.st = isotp_get_frame_separation_time(frame);
 
     pcb->output_flow.state = ISOTP_STATE_TX_CF;
 
@@ -363,7 +363,7 @@ void isotp_input(struct canif *canif, struct lwcan_frame *frame)
         return;
     }
 
-    frame_type = get_frame_type(frame);
+    frame_type = isotp_get_frame_type(frame);
 
     switch (frame_type)
     {

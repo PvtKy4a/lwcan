@@ -215,7 +215,7 @@ struct isotp_pcb *get_isotp_pcb_list(void)
     return isotp_pcb_list;
 }
 
-uint8_t get_frame_type(struct lwcan_frame *frame)
+uint8_t isotp_get_frame_type(struct lwcan_frame *frame)
 {
     return (frame->data[FRAME_TYPE_OFFSET] & FRAME_TYPE_MASK);
 }
@@ -273,22 +273,22 @@ uint32_t isotp_get_ff_data_length(struct lwcan_frame *frame)
     return length;
 }
 
-uint8_t get_frame_serial_number(struct lwcan_frame *frame)
+uint8_t isotp_get_frame_serial_number(struct lwcan_frame *frame)
 {
     return (frame->data[CF_SN_OFFSET] & CF_SN_MASK);
 }
 
-uint8_t get_frame_flow_status(struct lwcan_frame *frame)
+uint8_t isotp_get_frame_flow_status(struct lwcan_frame *frame)
 {
     return (frame->data[FC_FS_OFFSET] & FC_FS_MASK);
 }
 
-uint8_t get_frame_block_size(struct lwcan_frame *frame)
+uint8_t isotp_get_frame_block_size(struct lwcan_frame *frame)
 {
     return frame->data[FC_BS_OFFSET];
 }
 
-uint8_t get_frame_separation_time(struct lwcan_frame *frame)
+uint8_t isotp_get_frame_separation_time(struct lwcan_frame *frame)
 {
     uint8_t time;
 
