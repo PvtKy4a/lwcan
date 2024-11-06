@@ -50,9 +50,6 @@ extern "C" {
 #define CF_SN_OFFSET     0      /** Consecutive frame serial number offset */
 #define CF_SN_MASK       0x0F   /** Consecutive frame serial number mask */
 #define CF_DATA_OFFSET   1      /** Consecutive frame data offset */
-/////////////////
-#define CF_DATA_LENGTH   7      /** Consecutive frame data length */
-/////////////////
 
 #define FC              0x30    /** Flow control frame */
 #define FC_FS_OFFSET    0       /** Flow control frame flow status offset */
