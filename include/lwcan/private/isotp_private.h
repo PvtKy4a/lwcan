@@ -33,9 +33,6 @@ extern "C" {
 #define FD_SF_DL_OFFSET     1       /** CAN FD single frame data length offset */
 #define FD_SF_DL_MASK       0xFF    /** CAN FD single frame data length mask */
 #define FD_SF_DATA_OFFSET   2       /** CAN FD single frame data offset */
-/////////////
-#define SF_DATA_LENGTH      7       /** Single frame data length */
-/////////////
 
 #define FF                  0x10    /** First frame */
 #define FF_DL_HI_OFFSET     0       /** First frame data length hi offset */
@@ -48,9 +45,6 @@ extern "C" {
 #define FD_FF_FLAG_MASK     0xFF    /** CAN FD first frame flag mask */
 #define FD_FF_DL_OFFSET     2       /** CAN FD first frame data length offset */
 #define FD_FF_DATA_OFFSET   6       /** CAN FD first frame data offset */
-//////////////////////
-#define FF_DATA_LENGTH     6    /** First frame data length */
-//////////////////////
 
 #define CF               0x20   /** Consecutive frame */
 #define CF_SN_OFFSET     0      /** Consecutive frame serial number offset */
@@ -109,8 +103,6 @@ void isotp_out_flow_output(void *arg);
 void isotp_in_flow_output(void *arg);
 
 void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type);
-
-//void isotp_sent(struct canif *canif, struct lwcan_frame *frame);
 
 struct isotp_pcb *get_isotp_pcb_list(void);
 
