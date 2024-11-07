@@ -17,9 +17,6 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#define HI_BYTE(x) ((x) >> 8)
-#define LO_BYTE(x) ((x) & 0xFF)
-
 #define FRAME_TYPE_OFFSET   0
 #define FRAME_TYPE_MASK     0xF0
 
@@ -46,21 +43,21 @@ extern "C" {
 #define FD_FF_DL_OFFSET     2       /** CAN FD first frame data length offset */
 #define FD_FF_DATA_OFFSET   6       /** CAN FD first frame data offset */
 
-#define CF               0x20   /** Consecutive frame */
-#define CF_SN_OFFSET     0      /** Consecutive frame serial number offset */
-#define CF_SN_MASK       0x0F   /** Consecutive frame serial number mask */
-#define CF_DATA_OFFSET   1      /** Consecutive frame data offset */
+#define CF              0x20   /** Consecutive frame */
+#define CF_SN_OFFSET    0      /** Consecutive frame serial number offset */
+#define CF_SN_MASK      0x0F   /** Consecutive frame serial number mask */
+#define CF_DATA_OFFSET  1      /** Consecutive frame data offset */
 
-#define FC              0x30    /** Flow control frame */
-#define FC_FS_OFFSET    0       /** Flow control frame flow status offset */
-#define FC_FS_MASK      0x0F    /** Flow control frame flow status mask */
-#define FC_BS_OFFSET    1       /** Flow control frame block size offset */
-#define FC_ST_OFFSET    2       /** Flow control frame separation size offset */
-#define FC_PADDING_OFFSET 3
+#define FC                  0x30    /** Flow control frame */
+#define FC_FS_OFFSET        0       /** Flow control frame flow status offset */
+#define FC_FS_MASK          0x0F    /** Flow control frame flow status mask */
+#define FC_BS_OFFSET        1       /** Flow control frame block size offset */
+#define FC_ST_OFFSET        2       /** Flow control frame separation size offset */
+#define FC_PADDING_OFFSET   3       /** Flow control frame padding byte offset */
 
-#define FS_READY        0       /** Flow status ready */
-#define FS_WAIT         1       /** Flow status wait */
-#define FS_OVERFLOW     2       /** Flow status owerflow */
+#define FS_READY    0       /** Flow status ready */
+#define FS_WAIT     1       /** Flow status wait */
+#define FS_OVERFLOW 2       /** Flow status owerflow */
 
 #define ST_MS_RANGE_MIN         0       /** Separation time millisec range min */
 #define ST_MS_RANGE_MAX         0x7F    /** Separation time millisec range max */

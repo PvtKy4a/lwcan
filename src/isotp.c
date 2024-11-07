@@ -326,39 +326,35 @@ void isotp_fill_sf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool 
 
     flow->frame.dlc = lwcan_length_to_dlc(flow->remaining_data);
 
+    if (flow->frame.dlc < ISOTP_MIN_DLC)
+    {
+        flow->frame.dlc = ISOTP_MIN_DLC;
+    }
+
     flow->frame.data[FRAME_TYPE_OFFSET] = SF;
 
     if (!can_fd)
     {
-        flow->frame.dlc = ISOTP_MIN_DLC;
-
-        flow->frame.data[SF_DL_OFFSET] |= flow->remaining_data & SF_DL_MASK;
+        flow->frame.data[SF_DL_OFFSET] |= (flow->remaining_data & SF_DL_MASK);
 
         offset = SF_DATA_OFFSET;
     }
     else
     {
-        flow->frame.dlc = lwcan_length_to_dlc(flow->remaining_data);
-
-        if (flow->frame.dlc < ISOTP_MIN_DLC)
-        {
-            flow->frame.dlc = ISOTP_MIN_DLC;
-        }
-
-        flow->frame.data[FD_SF_DL_OFFSET] = flow->remaining_data & SF_DL_MASK;
+        flow->frame.data[FD_SF_DL_OFFSET] = (flow->remaining_data & FD_SF_DL_MASK);
 
         offset = FD_SF_DATA_OFFSET;
     }
 
     length = lwcan_dlc_to_length(flow->frame.dlc);
 
-    lwcan_buffer_copy_from(flow->buffer, flow->frame.data + offset, flow->remaining_data);
+    lwcan_buffer_copy_from(flow->buffer, (flow->frame.data + offset), flow->remaining_data);
 
     if (flow->remaining_data < (uint8_t)(length - offset))
     {
         offset += flow->remaining_data;
 
-        add_padding(flow->frame.data + offset, (length - offset));
+        add_padding((flow->frame.data + offset), (length - offset));
     }
 
     flow->remaining_data -= flow->remaining_data;
@@ -372,15 +368,13 @@ void isotp_fill_ff(struct isotp_flow *flow, uint32_t id, bool extended_id, bool 
 
     flow->frame.extended_id = extended_id;
 
-    flow->frame.dlc = lwcan_length_to_dlc(flow->remaining_data);
-
     flow->frame.data[FRAME_TYPE_OFFSET] = FF;
 
     if (!can_fd)
     {
         flow->frame.dlc = ISOTP_MIN_DLC;
 
-        flow->frame.data[FF_DL_HI_OFFSET] |= (uint8_t)((flow->remaining_data << 8) & FF_DL_HI_MASK);
+        flow->frame.data[FF_DL_HI_OFFSET] |= (uint8_t)((flow->remaining_data >> 8) & FF_DL_HI_MASK);
 
         flow->frame.data[FF_DL_LO_OFFSET] = (uint8_t)(flow->remaining_data & FF_DL_LO_MASK);
 
@@ -404,7 +398,7 @@ void isotp_fill_ff(struct isotp_flow *flow, uint32_t id, bool extended_id, bool 
 
     length = lwcan_dlc_to_length(flow->frame.dlc);
 
-    lwcan_buffer_copy_from(flow->buffer, flow->frame.data + offset, (length - offset));
+    lwcan_buffer_copy_from(flow->buffer, (flow->frame.data + offset), (length - offset));
 
     flow->remaining_data -= (length - offset);
 }
@@ -431,27 +425,27 @@ void isotp_fill_cf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool 
         }
     }
 
-    length = lwcan_dlc_to_length(flow->frame.dlc);
-
     flow->frame.data[FRAME_TYPE_OFFSET] = CF;
 
-    flow->frame.data[CF_SN_OFFSET] |= flow->cf_sn & CF_SN_MASK;
+    flow->frame.data[CF_SN_OFFSET] |= (flow->cf_sn & CF_SN_MASK);
 
     offset = CF_DATA_OFFSET;
 
+    length = lwcan_dlc_to_length(flow->frame.dlc);
+
     if (flow->remaining_data < (uint8_t)(length - offset))
     {
-        lwcan_buffer_copy_from_offset(flow->buffer, flow->frame.data + offset, flow->remaining_data, (flow->buffer->length - flow->remaining_data));
+        lwcan_buffer_copy_from_offset(flow->buffer, (flow->frame.data + offset), flow->remaining_data, (flow->buffer->length - flow->remaining_data));
 
-        offset += ((flow->buffer->length - flow->remaining_data) + 1);
+        offset += flow->remaining_data;
 
-        add_padding(flow->frame.data + offset, (length - offset));
+        add_padding((flow->frame.data + offset), (length - offset));
 
         flow->remaining_data -= flow->remaining_data;
     }
     else
     {
-        lwcan_buffer_copy_from_offset(flow->buffer, flow->frame.data + offset, (length - offset), (flow->buffer->length - flow->remaining_data));
+        lwcan_buffer_copy_from_offset(flow->buffer, (flow->frame.data + offset), (length - offset), (flow->buffer->length - flow->remaining_data));
 
         flow->remaining_data -= (length - offset);
     }
@@ -469,7 +463,7 @@ void isotp_fill_fc(struct isotp_flow *flow, uint32_t id, bool extended_id)
 
     flow->frame.data[FRAME_TYPE_OFFSET] = FC;
 
-    flow->frame.data[FC_FS_OFFSET] |= flow->fs & FC_FS_MASK;
+    flow->frame.data[FC_FS_OFFSET] |= (flow->fs & FC_FS_MASK);
 
     flow->frame.data[FC_BS_OFFSET] = flow->bs;
 
@@ -479,7 +473,7 @@ void isotp_fill_fc(struct isotp_flow *flow, uint32_t id, bool extended_id)
 
     if (length >= FC_PADDING_OFFSET)
     {
-        add_padding(flow->frame.data + FC_PADDING_OFFSET, (length - FC_PADDING_OFFSET));
+        add_padding((flow->frame.data + FC_PADDING_OFFSET), (length - FC_PADDING_OFFSET));
     }
 }
 

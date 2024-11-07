@@ -22,7 +22,7 @@ static void store_sf_data(struct isotp_flow *flow, struct lwcan_frame *frame)
         offset = FD_SF_DATA_OFFSET;
     }
 
-    lwcan_buffer_copy_to(flow->buffer, frame->data + offset, flow->remaining_data);
+    lwcan_buffer_copy_to(flow->buffer, (frame->data + offset), flow->remaining_data);
 }
 
 static void store_ff_data(struct isotp_flow *flow, struct lwcan_frame *frame)
@@ -40,7 +40,7 @@ static void store_ff_data(struct isotp_flow *flow, struct lwcan_frame *frame)
         offset = FD_FF_DATA_OFFSET;
     }
 
-    lwcan_buffer_copy_to(flow->buffer, frame->data + offset, (length - offset));
+    lwcan_buffer_copy_to(flow->buffer, (frame->data + offset), (length - offset));
 
     flow->remaining_data -= (length - offset);
 }
@@ -55,13 +55,13 @@ static void store_cf_data(struct isotp_flow *flow, struct lwcan_frame *frame)
 
     if (flow->remaining_data < (uint8_t)(length - offset))
     {
-        lwcan_buffer_copy_to_offset(flow->buffer, frame->data + offset, flow->remaining_data, (flow->buffer->length - flow->remaining_data));
+        lwcan_buffer_copy_to_offset(flow->buffer, (frame->data + offset), flow->remaining_data, (flow->buffer->length - flow->remaining_data));
 
         flow->remaining_data -= flow->remaining_data;
     }
     else
     {
-        lwcan_buffer_copy_to_offset(flow->buffer, frame->data + offset, (length - offset), flow->buffer->length - flow->remaining_data);
+        lwcan_buffer_copy_to_offset(flow->buffer, (frame->data + offset), (length - offset), (flow->buffer->length - flow->remaining_data));
 
         flow->remaining_data -= (length - offset);
     }
