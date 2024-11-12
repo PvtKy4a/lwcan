@@ -1,4 +1,5 @@
-#include "lwcan/frame.h"
+#include "lwcan/length.h"
+#include "lwcan/can.h"
 
 static const uint8_t dlc_to_length[] = {
 	0, 1, 2, 3, 4, 5, 6, 7,
@@ -18,14 +19,14 @@ static const uint8_t length_to_dlc[] = {
 	15, 15, 15, 15, 15, 15, 15, 15	/* 57 - 64 */
 };
 
-uint8_t lwcan_dlc_to_length(uint8_t dlc)
+uint8_t can_fd_dlc2len(uint8_t dlc)
 {
     return dlc_to_length[dlc & 0x0F];
 }
 
-uint8_t lwcan_length_to_dlc(uint8_t length)
+uint8_t can_fd_len2dlc(uint8_t length)
 {
-    if (length > CANFD_MAX_LENGTH)
+    if (length > CANFD_MAX_DLEN)
     {
         return CANFD_MAX_DLC;
     }	

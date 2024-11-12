@@ -10,7 +10,7 @@ extern "C" {
 #if LWCAN_RAW /* don't build if not configured for use in lwcan_options.h */
 
 #include "lwcan/canif.h"
-#include "lwcan/frame.h"
+#include "lwcan/can.h"
 
 typedef enum
 {
@@ -21,7 +21,7 @@ typedef enum
 
 void canraw_init(void);
 
-canraw_input_state_t canraw_input(struct canif *canif, struct lwcan_frame *frame);
+canraw_input_state_t canraw_input(struct canif *canif, void *frame);
 
 #endif
 

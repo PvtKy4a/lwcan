@@ -4,7 +4,6 @@
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/private/raw_private.h"
 
-#include <stdlib.h>
 #include <string.h>
 
 #define MAX_CANIF_NUM 254
@@ -89,13 +88,9 @@ lwcanerr_t canif_remove(struct canif *canif)
 {
     struct canif *canif_temp;
 
-    lwcanerr_t ret = ERROR_CANIF;
-
     if (canif == NULL)
     {
-        ret = ERROR_ARG;
-
-        goto exit;
+        return ERROR_ARG;
     }
 
     if (canif_list == canif)
@@ -110,24 +105,15 @@ lwcanerr_t canif_remove(struct canif *canif)
             {
                 canif_temp->next = canif->next;
 
-                ret = ERROR_OK;
-
                 break;
             }
         }
-        if (canif_temp == NULL)
-        {
-            ret = ERROR_OK;
-
-            goto exit;
-        }
     }
 
-exit:
-    return ret;
+    return ERROR_OK;
 }
 
-lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
+lwcanerr_t canif_input(struct canif *canif, void *frame)
 {
 #if LWCAN_RAW
     canraw_input_state_t raw_status;
@@ -150,6 +136,36 @@ lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame)
     }
 
     return ERROR_OK;
+}
+
+lwcanerr_t canif_set_bitrate(struct canif *canif, uint32_t bitrate)
+{
+    if (canif == NULL || bitrate == 0)
+    {
+        return ERROR_ARG;
+    }
+
+    if (canif->set_bitrate == NULL)
+    {
+        return ERROR_CANIF;
+    }
+
+    return canif->set_bitrate(canif, bitrate);
+}
+
+lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter)
+{
+    if (canif == NULL)
+    {
+        return ERROR_ARG;
+    }
+
+    if (canif->set_filter == NULL)
+    {
+        return ERROR_CANIF;
+    }
+
+    return canif->set_filter(canif, filter);
 }
 
 lwcanerr_t canif_get_name(struct canif *canif, char *name)

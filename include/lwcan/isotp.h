@@ -11,16 +11,15 @@ extern "C" {
 
 #include "lwcan/error.h"
 #include "lwcan/buffer.h"
-#include "lwcan/frame.h"
+#include "lwcan/can.h"
 
 #include <stdint.h>
-#include <stdbool.h>
 
 struct isotp_pcb;
 
 typedef lwcanerr_t (*isotp_receive_function)(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
-typedef lwcanerr_t (*isotp_sent_function)(void *arg, struct isotp_pcb *pcb, uint16_t length);
+typedef lwcanerr_t (*isotp_sent_function)(void *arg, struct isotp_pcb *pcb, uint32_t length);
 
 typedef void (*isotp_error_function)(void *arg, lwcanerr_t error);
 
@@ -28,26 +27,26 @@ struct isotp_flow
 {
     uint8_t state;
 
-    struct lwcan_frame frame;
-
     struct lwcan_buffer *buffer;
 
     uint32_t remaining_data;
 
     uint8_t cf_sn;  /** Consecutive frame serial number */
 
+    uint8_t fs; /** Flow status */
+
     uint8_t bs; /** Block size */
 
     uint8_t st; /** Separation time */
 
-    uint8_t fs; /** Flow status */
+    uint8_t n_wft; /** Number of receiver wait frames */
 };
 
 struct isotp_pcb
 {
     struct isotp_pcb *next;
 
-    uint8_t canif_index;
+    uint8_t if_index;
 
     isotp_receive_function receive;
 
@@ -57,24 +56,18 @@ struct isotp_pcb
 
     void *callback_arg;
 
-    uint32_t output_id;
+    canid_t tx_id;
 
-    uint32_t input_id;
-
-    bool extended_id;
-
-    bool can_fd;
+    canid_t rx_id;
 
     struct isotp_flow output_flow;
 
     struct isotp_flow input_flow;
 };
 
-struct isotp_pcb *isotp_new(uint8_t canif_index, uint32_t output_id, uint32_t input_id, bool extended_id, bool can_fd);
+struct isotp_pcb *isotp_new(void);
 
-lwcanerr_t isotp_bind(struct isotp_pcb *pcb, uint8_t canif_index);
-
-lwcanerr_t isotp_set_address(struct isotp_pcb *pcb, uint32_t output_id, uint32_t input_id, bool extended_id);
+lwcanerr_t isotp_bind(struct isotp_pcb *pcb, struct addr_can *addr);
 
 lwcanerr_t isotp_close(struct isotp_pcb *pcb);
 

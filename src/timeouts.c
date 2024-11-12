@@ -46,6 +46,11 @@ static void *timeout_malloc(void)
 
 static void timeout_free(void *mem)
 {
+    if (mem == NULL)
+    {
+        return;
+    }
+
     if (((uint8_t *)mem > &timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE - TIMEOUT_MEM_CHUNK_SIZE - 1]) || ((uint8_t *)mem < &timeout_mem_pool[0]))
     {
         return;

@@ -5,8 +5,7 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
+#include <string.h>
 
 void *lwcan_malloc(size_t size);
 

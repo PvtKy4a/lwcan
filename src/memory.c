@@ -2,8 +2,6 @@
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 
-#include <string.h>
-
 #define MEMORY_BYTE_ALIGNMENT 8
 
 #define MEMORY_BYTE_ALIGNMENT_MASK (0x0007)

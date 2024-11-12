@@ -8,13 +8,6 @@ extern "C" {
 #include "lwcan_options.h"
 
 /*
- *  Whether or not an operating system is used
- */
-#if !defined LWCAN_WITH_OS
-#define LWCAN_WITH_OS               0
-#endif
-
-/*
  *  The amount of memory available for sending and receiving
  */
 #if !defined LWCAN_MEM_SIZE
@@ -28,15 +21,22 @@ extern "C" {
 #define LWCAN_ISOTP                 1
 #endif
 
-/**
- * Minimum Data Length Code in frame
+/*
+ *  Enable CAN FD support for ISOTP
  */
-#if !defined ISOTP_MIN_DLC
-#define ISOTP_MIN_DLC               8
+#if !defined ISOTP_CANFD
+#define ISOTP_CANFD                 0
 #endif
 
 /*
- *  Represents the byte used for padding messages sent
+ *  Enable CAN FD bit rate switch (second bitrate for payload data) for ISOTP
+ */
+#if !defined ISOTP_CANFD_BRS
+#define ISOTP_CANFD_BRS             1
+#endif
+
+/*
+ *  A byte used to pad messages to prevent bit stuffing
  */
 #if !defined ISOTP_PADDING_BYTE
 #define ISOTP_PADDING_BYTE          0xAA
@@ -47,18 +47,24 @@ extern "C" {
  *  Represents the number of consecutive frames that a sender should send before expecting the layer to send a flow control message.
  *  0 means infinitely large block size (implying no flow control message)
  */
-#if !defined ISOTP_RECEIVE_BLOCK_SIZE
-#define ISOTP_RECEIVE_BLOCK_SIZE    0
+#if !defined ISOTP_RECEIVE_BS
+#define ISOTP_RECEIVE_BS            0
 #endif
 
 /*
- *  The single-byte Separation Time to include in the flow control message that the layer will send when receiving data.
- *  Refer to ISO-15765-2 for specific values. From 1 to 127, represents milliseconds.
- *  From 0xF1 to 0xF9, represents hundreds of microseconds (100us, 200us, …, 900us).
- *  0 Means no timing requirements
+ *  The minimum delay between frames. It is used as a way for the receiver to guide the sender not to overburden it. 
+ *  A value between 0 .. 127 (0x7F), represents a minimum delay in milliseconds. 
+ *  While values in the range 241 (0xF1) to 249 (0xF9) specify delays increasing from 100 to 900 microseconds.
  */
-#if !defined ISOTP_SEND_SEPARATION_TIME
-#define ISOTP_RECEIVE_SEPARATION_TIME  0
+#if !defined ISOTP_RECEIVE_ST
+#define ISOTP_RECEIVE_ST            0
+#endif
+
+/*
+ *  Maximum limit to the number of FC WAIT a receiver is allowed to sent
+ */
+#if !defined ISOTP_N_WFT
+#define ISOTP_N_WFT                 0
 #endif
 
 /*
@@ -94,13 +100,6 @@ extern "C" {
  */
 #if !defined ISOTP_N_CR
 #define ISOTP_N_CR                  1000
-#endif
-
-/*
- *  Allows or denies wait state in flow control frame
- */
-#if !defined ISOTP_FC_WAIT_ALLOW
-#define ISOTP_FC_WAIT_ALLOW         1
 #endif
 
 /*

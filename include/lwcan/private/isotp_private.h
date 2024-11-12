@@ -12,10 +12,9 @@ extern "C" {
 #include "lwcan/isotp.h"
 #include "lwcan/canif.h"
 #include "lwcan/buffer.h"
-#include "lwcan/frame.h"
+#include "lwcan/can.h"
 
 #include <stdint.h>
-#include <stdbool.h>
 
 #define FRAME_TYPE_OFFSET   0
 #define FRAME_TYPE_MASK     0xF0
@@ -73,24 +72,24 @@ extern "C" {
 
 typedef enum
 {
-    ISOTP_STATE_IDLE,       /** Idle state */
+    ISOTP_IDLE,       /** Idle state */
 
-    ISOTP_STATE_TX_SF,      /** Sending single frame */
+    ISOTP_TX_SF,      /** Sending single frame */
 
-    ISOTP_STATE_TX_FF,      /** Sending first frame */
+    ISOTP_TX_FF,      /** Sending first frame */
 
-    ISOTP_STATE_TX_CF,      /** Sending consecutive frame */
+    ISOTP_TX_CF,      /** Sending consecutive frame */
 
-    ISOTP_STATE_TX_FC,      /** Sending flow control frame */
+    ISOTP_TX_FC,      /** Sending flow control frame */
 
-    ISOTP_STATE_WAIT_CF,    /** Waiting for consecutive frame */
+    ISOTP_WAIT_CF,    /** Waiting for consecutive frame */
 
-    ISOTP_STATE_WAIT_FC,    /** Waiting for flow control frame */
+    ISOTP_WAIT_FC,    /** Waiting for flow control frame */
 } isotp_state_t;
 
 void isotp_init(void);
 
-void isotp_input(struct canif *canif, struct lwcan_frame *frame);
+void isotp_input(struct canif *canif, void *frame);
 
 void isotp_out_flow_output(void *arg);
 
@@ -98,29 +97,19 @@ void isotp_in_flow_output(void *arg);
 
 void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type);
 
-struct isotp_pcb *get_isotp_pcb_list(void);
+struct isotp_pcb *isotp_get_pcb_list(void);
 
-uint8_t isotp_get_frame_type(struct lwcan_frame *frame);
+uint8_t isotp_get_sf_dl(uint8_t *frame_data);
 
-uint8_t isotp_get_sf_data_length(struct lwcan_frame *frame);
+uint32_t isotp_get_ff_dl(uint8_t *frame_data);
 
-uint32_t isotp_get_ff_data_length(struct lwcan_frame *frame);
+void isotp_fill_sf(struct isotp_flow *flow, void *frame);
 
-uint8_t isotp_get_frame_serial_number(struct lwcan_frame *frame);
+void isotp_fill_ff(struct isotp_flow *flow, void *frame);
 
-uint8_t isotp_get_frame_flow_status(struct lwcan_frame *frame);
+void isotp_fill_cf(struct isotp_flow *flow, void *frame);
 
-uint8_t isotp_get_frame_block_size(struct lwcan_frame *frame);
-
-uint8_t isotp_get_frame_separation_time(struct lwcan_frame *frame);
-
-void isotp_fill_sf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
-
-void isotp_fill_ff(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
-
-void isotp_fill_cf(struct isotp_flow *flow, uint32_t id, bool extended_id, bool can_fd);
-
-void isotp_fill_fc(struct isotp_flow *flow, uint32_t id, bool extended_id);
+void isotp_fill_fc(struct isotp_flow *flow, void *frame);
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer);
 

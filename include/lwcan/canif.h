@@ -6,17 +6,21 @@ extern "C" {
 #endif
 
 #include "lwcan/error.h"
-#include "lwcan/frame.h"
+#include "lwcan/can.h"
 
 #include <stdint.h>
 
 struct canif;
 
-typedef lwcanerr_t (*canif_input_function)(struct canif *canif, struct lwcan_frame *frame);
+typedef lwcanerr_t (*canif_input_function)(struct canif *canif, void *frame);
 
-typedef lwcanerr_t (*canif_output_function)(struct canif *canif, struct lwcan_frame *frame);
+typedef lwcanerr_t (*canif_output_function)(struct canif *canif, void *frame);
 
 typedef lwcanerr_t (*canif_init_function)(struct canif *canif);
+
+typedef lwcanerr_t (*canif_set_bitrate_function)(struct canif *canif, uint32_t bitrate);
+
+typedef lwcanerr_t (*canif_set_filter_function)(struct canif *canif, struct can_filter *filter);
 
 struct canif
 {
@@ -31,13 +35,21 @@ struct canif
     canif_input_function input;
 
     canif_output_function output;
+
+    canif_set_bitrate_function set_bitrate;
+
+    canif_set_filter_function set_filter;
 };
 
 lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function init, canif_input_function input);
 
 lwcanerr_t canif_remove(struct canif *canif);
 
-lwcanerr_t canif_input(struct canif *canif, struct lwcan_frame *frame);
+lwcanerr_t canif_input(struct canif *canif, void *frame);
+
+lwcanerr_t canif_set_bitrate(struct canif *canif, uint32_t bitrate);
+
+lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter);
 
 lwcanerr_t canif_get_name(struct canif *canif, char *name);
 

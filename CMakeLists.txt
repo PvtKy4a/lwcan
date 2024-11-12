@@ -5,11 +5,11 @@ add_library(lwcan)
 target_sources(lwcan PRIVATE
     src/buffer.c
     src/canif.c
-    src/frame.c
     src/init.c
     src/isotp_in.c
     src/isotp_out.c
     src/isotp.c
+    src/length.c
     src/memory.c
     src/raw.c
     src/timeouts.c
