@@ -67,7 +67,7 @@ struct isotp_pcb
 
 struct isotp_pcb *isotp_new(void);
 
-lwcanerr_t isotp_bind(struct isotp_pcb *pcb, struct addr_can *addr);
+lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr);
 
 lwcanerr_t isotp_close(struct isotp_pcb *pcb);
 
