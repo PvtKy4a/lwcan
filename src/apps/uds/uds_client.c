@@ -201,6 +201,13 @@ lwcanerr_t uds_client_init(const struct uds_context *context, void *handle)
     return ERROR_OK;
 }
 
+void uds_client_cleanup(void)
+{
+    isotp_remove(uds_state.isotp_pcb);
+
+    memset(&uds_state, 0, sizeof(uds_state));
+}
+
 static lwcanerr_t send_request(uint8_t *data, uint32_t size)
 {
     lwcanerr_t ret;

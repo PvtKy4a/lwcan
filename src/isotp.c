@@ -145,7 +145,7 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
     return ERROR_OK;
 }
 
-lwcanerr_t isotp_close(struct isotp_pcb *pcb)
+lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
 {
     struct isotp_pcb *pcb_temp;
 

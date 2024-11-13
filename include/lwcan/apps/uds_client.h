@@ -13,6 +13,8 @@ extern "C" {
 
 lwcanerr_t uds_client_init(const struct uds_context *context, void *handle);
 
+void uds_client_cleanup(void);
+
 lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type);
 
 uint8_t get_active_session(void);
