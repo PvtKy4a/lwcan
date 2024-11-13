@@ -205,6 +205,12 @@ void uds_client_cleanup(void)
 {
     isotp_remove(uds_state.isotp_pcb);
 
+    lwcan_untimeout(p2_timer_handler, NULL);
+
+    lwcan_untimeout(p2_star_timer_handler, NULL);
+
+    lwcan_untimeout(s3_client_timer_handler, NULL);
+
     memset(&uds_state, 0, sizeof(uds_state));
 }
 
