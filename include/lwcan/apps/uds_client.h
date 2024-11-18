@@ -17,7 +17,7 @@ void uds_client_cleanup(void);
 
 lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type);
 
-uint8_t get_active_session(void);
+uint8_t uds_get_active_session(void);
 
 lwcanerr_t uds_reset_service(uint8_t sub_function);
 
