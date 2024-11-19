@@ -2,17 +2,16 @@
 #include "lwcan/error.h"
 #include "lwcan/system.h"
 #include "lwcan/options.h"
+#include "lwcan/debug.h"
 
 #include <stdbool.h>
 #include <string.h>
-
-#define MAX_TIMEOUTS_NUM 10
 
 #define MAX_TIMEOUT 0x7fffffff
 
 #define TIMEOUT_MEM_CHUNK_SIZE sizeof(struct timeouts)
 
-#define TIMEOUT_MEM_POOL_SIZE ((TIMEOUT_MEM_CHUNK_SIZE * MAX_TIMEOUTS_NUM) + MAX_TIMEOUTS_NUM)
+#define TIMEOUT_MEM_POOL_SIZE ((TIMEOUT_MEM_CHUNK_SIZE * LWCAN_TIMEOUTS_NUM) + LWCAN_TIMEOUTS_NUM)
 
 struct timeouts
 {
@@ -121,6 +120,8 @@ void lwcan_timeout(uint32_t time_ms, void (*handler)(void *), void *arg)
 
     if (new_timeout == NULL)
     {
+        LWCAN_ASSERT("lwcan_timeout: new_timeout != NULL, LWCAN_TIMEOUTS_NUM limit reached", new_timeout != NULL);
+
         return;
     }
 

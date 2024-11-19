@@ -1,17 +1,11 @@
 #include "lwcan/memory.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
+#include "lwcan/debug.h"
 
 #define MEMORY_BYTE_ALIGNMENT 8
 
 #define MEMORY_BYTE_ALIGNMENT_MASK (0x0007)
-
-#define MEMORY_ASSERT(x) \
-    if ((x) == 0)       \
-    {                   \
-        for (;;)        \
-            ;           \
-    }
 
 /* Block sizes must not get too small. */
 #define MEMORY_HEAP_MINIMUM_BLOCK_SIZE ((size_t)(xHeapStructSize << 1))
@@ -101,7 +95,7 @@ void *lwcan_malloc(size_t size)
                     if ((size + (MEMORY_BYTE_ALIGNMENT - (size & MEMORY_BYTE_ALIGNMENT_MASK))) > size)
                     {
                         size += (MEMORY_BYTE_ALIGNMENT - (size & MEMORY_BYTE_ALIGNMENT_MASK));
-                        MEMORY_ASSERT((size & MEMORY_BYTE_ALIGNMENT_MASK) == 0);
+                        LWCAN_ASSERT("(size & MEMORY_BYTE_ALIGNMENT_MASK) == 0", (size & MEMORY_BYTE_ALIGNMENT_MASK) == 0);
                     }
                     else
                     {
@@ -148,7 +142,7 @@ void *lwcan_malloc(size_t size)
                          * cast is used to prevent byte alignment warnings from the
                          * compiler. */
                         pxNewBlockLink = (void *)(((uint8_t *)pxBlock) + size);
-                        MEMORY_ASSERT((((size_t)pxNewBlockLink) & MEMORY_BYTE_ALIGNMENT_MASK) == 0);
+                        LWCAN_ASSERT("(((size_t)pxNewBlockLink) & MEMORY_BYTE_ALIGNMENT_MASK) == 0", (((size_t)pxNewBlockLink) & MEMORY_BYTE_ALIGNMENT_MASK) == 0);
 
                         /* Calculate the sizes of two blocks split from the
                          * single block. */
@@ -177,7 +171,7 @@ void *lwcan_malloc(size_t size)
 
     }
 
-    MEMORY_ASSERT((((size_t)pvReturn) & (size_t)MEMORY_BYTE_ALIGNMENT_MASK) == 0);
+    LWCAN_ASSERT("(((size_t)pvReturn) & (size_t)MEMORY_BYTE_ALIGNMENT_MASK) == 0", (((size_t)pvReturn) & (size_t)MEMORY_BYTE_ALIGNMENT_MASK) == 0);
 
     return pvReturn;
 }
@@ -218,9 +212,10 @@ void lwcan_free(void *p)
         pxLink = (void *)puc;
 
         /* Check the block is actually allocated. */
-        MEMORY_ASSERT((pxLink->xBlockSize & xBlockAllocatedBit) != 0);
+        
+        LWCAN_ASSERT("(pxLink->xBlockSize & xBlockAllocatedBit) != 0", (pxLink->xBlockSize & xBlockAllocatedBit) != 0);
 
-        MEMORY_ASSERT(pxLink->pxNextFreeBlock == NULL);
+        LWCAN_ASSERT("pxLink->pxNextFreeBlock == NULL", pxLink->pxNextFreeBlock == NULL);
 
         if ((pxLink->xBlockSize & xBlockAllocatedBit) != 0)
         {

@@ -14,6 +14,13 @@ extern "C" {
 #define LWCAN_MEM_SIZE              512
 #endif
 
+/*
+ *  Maximum number of active timeouts
+ */
+#if !defined LWCAN_TIMEOUTS_NUM
+#define LWCAN_TIMEOUTS_NUM          10
+#endif
+
 /**
  * LWCAN_ISOTP == 1: Turn on ISOTP.
  */

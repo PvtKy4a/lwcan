@@ -5,6 +5,7 @@
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/timeouts.h"
+#include "lwcan/debug.h"
 
 #include <string.h>
 
@@ -76,6 +77,8 @@ void isotp_in_flow_output(void *arg)
 
     if (arg == NULL)
     {
+        LWCAN_ASSERT("arg != NULL", arg != NULL);
+
         return;
     }
 
@@ -85,6 +88,8 @@ void isotp_in_flow_output(void *arg)
 
     if (canif == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+
         return;
     }
 
@@ -105,12 +110,15 @@ void isotp_in_flow_output(void *arg)
             break;
 
         default:
+            LWCAN_ASSERT("Unallowed case", 0);
             return;
     }
 
     ret = canif->output(canif, &frame);
 
     lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
+
+    LWCAN_ASSERT("canif->output", ret == 0);
 
     if (ret == ERROR_OK)
     {
@@ -152,6 +160,8 @@ static void received_sf(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
         if (pcb->error != NULL)
         {
             pcb->error(pcb->callback_arg, ERROR_MEMORY);
@@ -197,6 +207,8 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
         pcb->input_flow.fs = FS_OVERFLOW;
 
         if (pcb->error != NULL)
@@ -371,6 +383,9 @@ void isotp_input(struct canif *canif, void *frame)
 
     uint8_t if_index;
 
+    LWCAN_ASSERT("canif != NULL", canif != NULL);
+    LWCAN_ASSERT("frame != NULL", frame != NULL);
+
     if (canif == NULL || frame == NULL)
     {
         return;
@@ -380,6 +395,8 @@ void isotp_input(struct canif *canif, void *frame)
 
     if (if_index == 0)
     {
+        LWCAN_ASSERT("if_index == 0", if_index == 0);
+
         return;
     }
 
@@ -399,6 +416,8 @@ void isotp_input(struct canif *canif, void *frame)
 
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return;
     }
 
@@ -427,6 +446,9 @@ void isotp_input(struct canif *canif, void *frame)
 
 lwcanerr_t isotp_received(struct isotp_pcb *pcb, struct lwcan_buffer *buffer)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
     if (pcb == NULL || buffer == NULL)
     {
         return ERROR_ARG;

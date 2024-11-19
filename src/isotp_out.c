@@ -5,6 +5,7 @@
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/timeouts.h"
+#include "lwcan/debug.h"
 
 #include <string.h>
 
@@ -143,6 +144,8 @@ void isotp_out_flow_output(void *arg)
     struct can_frame frame;
 #endif
 
+    LWCAN_ASSERT("arg != NULL", arg != NULL);
+
     if (arg == NULL)
     {
         return;
@@ -154,6 +157,8 @@ void isotp_out_flow_output(void *arg)
 
     if (canif == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+
         return;
     }
 
@@ -191,6 +196,8 @@ void isotp_out_flow_output(void *arg)
 
     lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
 
+    LWCAN_ASSERT("canif->output", ret == 0);
+
     if (ret == ERROR_OK)
     {
         isotp_sent(pcb, frame_type);
@@ -212,6 +219,10 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 {
     struct lwcan_buffer *buffer;
 
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+    LWCAN_ASSERT("data != NULL", data != NULL);
+    LWCAN_ASSERT("length != 0", length != 0);
+
     if (pcb == NULL || data == NULL || length == 0)
     {
         return ERROR_ARG;
@@ -226,6 +237,8 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
     if (buffer == NULL)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
         return ERROR_MEMORY;
     }
 

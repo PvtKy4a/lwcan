@@ -5,6 +5,7 @@
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
 #include "lwcan/timeouts.h"
+#include "lwcan/debug.h"
 
 #include <string.h>
 
@@ -74,6 +75,8 @@ struct isotp_pcb *isotp_new(void)
 
     if (isotp_pcb_num >= ISOTP_MAX_PCB_NUM)
     {
+        LWCAN_ASSERT("isotp_pcb_num < ISOTP_MAX_PCB_NUM", isotp_pcb_num < ISOTP_MAX_PCB_NUM);
+
         return NULL;
     }
 
@@ -81,6 +84,8 @@ struct isotp_pcb *isotp_new(void)
 
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return NULL;
     }
 
@@ -99,13 +104,18 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
 {
     canid_t tx_id, rx_id;
 
-    if (pcb == NULL ||addr == NULL)
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+    LWCAN_ASSERT("addr != NULL", addr != NULL);
+
+    if (pcb == NULL || addr == NULL)
     {
         return ERROR_ARG;
     }
 
     if (addr->can_ifindex == 0)
     {
+        LWCAN_ASSERT("addr->can_ifindex != 0", addr->can_ifindex != 0);
+
         return ERROR_CANIF;
     }
 
@@ -131,6 +141,9 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
         rx_id &= CAN_SFF_MASK;
     }
 
+    LWCAN_ASSERT("tx_id == addr->can_addr.tp.tx_id", tx_id == addr->can_addr.tp.tx_id);
+    LWCAN_ASSERT("rx_id == addr->can_addr.tp.rx_id", rx_id == addr->can_addr.tp.rx_id);
+
     if (tx_id != addr->can_addr.tp.tx_id || rx_id != addr->can_addr.tp.rx_id)
     {
         return ERROR_ARG;
@@ -150,6 +163,8 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
     struct isotp_pcb *pcb_temp;
 
     lwcanerr_t ret;
+
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
 
     if (pcb == NULL)
     {
@@ -194,6 +209,8 @@ exit:
 
 lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -206,6 +223,8 @@ lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_funct
 
 lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function sent)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -218,6 +237,8 @@ lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function se
 
 lwcanerr_t isotp_set_error_callback(struct isotp_pcb *pcb, isotp_error_function error)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -230,6 +251,8 @@ lwcanerr_t isotp_set_error_callback(struct isotp_pcb *pcb, isotp_error_function 
 
 lwcanerr_t isotp_set_callback_arg(struct isotp_pcb *pcb, void *arg)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -444,6 +467,9 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
 {
     struct lwcan_buffer *buffer_temp;
 
+    LWCAN_ASSERT("flow != NULL", flow != NULL);
+    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
     if (flow == NULL || buffer == NULL)
     {
         return;
@@ -475,6 +501,8 @@ void isotp_output_timeout_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
 
+    LWCAN_ASSERT("arg != NULL", arg != NULL);
+
     if (arg == NULL)
     {
         return;
@@ -495,6 +523,8 @@ void isotp_output_timeout_error_handler(void *arg)
 void isotp_input_timeout_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
+
+    LWCAN_ASSERT("arg != NULL", arg != NULL);
 
     if (arg == NULL)
     {

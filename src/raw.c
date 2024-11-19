@@ -5,6 +5,7 @@
 #include "lwcan/raw.h"
 #include "lwcan/private/raw_private.h"
 #include "lwcan/timeouts.h"
+#include "lwcan/debug.h"
 
 #include <string.h>
 
@@ -61,6 +62,8 @@ struct canraw_pcb *canraw_new(void)
 
     if (canraw_pcb_num >= CANRAW_MAX_PCB_NUM)
     {
+        LWCAN_ASSERT("canraw_pcb_num < CANRAW_MAX_PCB_NUM", canraw_pcb_num < CANRAW_MAX_PCB_NUM);
+
         return NULL;
     }
 
@@ -68,6 +71,8 @@ struct canraw_pcb *canraw_new(void)
 
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return NULL;
     }
 
@@ -85,6 +90,9 @@ struct canraw_pcb *canraw_new(void)
 
 lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+    LWCAN_ASSERT("addr != NULL", addr != NULL);
+
     if (pcb == NULL || addr == NULL)
     {
         return ERROR_ARG;
@@ -92,6 +100,8 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
 
     if (addr->can_ifindex == 0)
     {
+        LWCAN_ASSERT("addr->can_ifindex != 0", addr->can_ifindex != 0);
+
         return ERROR_CANIF;
     }
 
@@ -105,6 +115,8 @@ lwcanerr_t canraw_close(struct canraw_pcb *pcb)
     struct canraw_pcb *pcb_temp;
 
     lwcanerr_t ret;
+
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
 
     if (pcb == NULL)
     {
@@ -155,6 +167,9 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 
     uint8_t if_index;
 
+    LWCAN_ASSERT("canif != NULL", canif != NULL);
+    LWCAN_ASSERT("frame != NULL", frame != NULL);
+
     if (canif == NULL || frame == NULL)
     {
         goto exit_none;
@@ -164,6 +179,8 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 
     if (if_index == 0)
     {
+        LWCAN_ASSERT("if_index != 0", if_index != 0);
+
         goto exit_none;
     }
 
@@ -201,6 +218,9 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size)
 {
     struct canif *canif;
 
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+    LWCAN_ASSERT("frame != NULL", frame != NULL);
+
     if (pcb == NULL || frame == NULL || size < sizeof(struct can_frame))
     {
         return ERROR_ARG;
@@ -218,6 +238,8 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size)
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -230,6 +252,8 @@ lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_fu
 
 lwcanerr_t canraw_set_callback_arg(struct canraw_pcb *pcb, void *arg)
 {
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
