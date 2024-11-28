@@ -9,15 +9,23 @@
 
 #include <string.h>
 
-#define ISOTP_PCB_MEM_CHUNK_SIZE sizeof(struct isotp_pcb)
+#define ISOTP_MEM_CHUNK_SIZE sizeof(struct isotp_pcb)
 
-#define ISOTP_PCB_MEM_POOL_SIZE ((ISOTP_PCB_MEM_CHUNK_SIZE * ISOTP_MAX_PCB_NUM) + ISOTP_MAX_PCB_NUM)
+#define ISOTP_MEM_POOL_SIZE (ISOTP_MEM_CHUNK_SIZE * ISOTP_MAX_PCB_NUM)
 
-static uint8_t isotp_pcb_mem_pool[ISOTP_PCB_MEM_POOL_SIZE];
+#define ISOTP_MEM_POOL_BEGIN_ADDR (uint8_t *)(&isotp_mem_pool[0])
+
+#define ISOTP_MEM_POOL_END_ADDR (uint8_t *)(&isotp_mem_pool[ISOTP_MEM_POOL_SIZE - 1])
+
+#define ISOTP_MEM_POOL_SERVICE_BEGIN_IDX ISOTP_MEM_POOL_SIZE
+
+#define ISOTP_MEM_POOL_SERVICE_END_IDX ((ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM) - 1)
+
+static uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
 
 static struct isotp_pcb *isotp_pcb_list;
 
-static uint8_t isotp_pcb_num = 0;
+static uint8_t isotp_pcb_num;
 
 #if ISOTP_CANFD
 static const uint8_t padding_length[] = {
@@ -34,13 +42,13 @@ static const uint8_t padding_length[] = {
 
 static void *isotp_pcb_malloc(void)
 {
-    for (uint16_t i = 0; i < ISOTP_PCB_MEM_POOL_SIZE; i += (ISOTP_PCB_MEM_CHUNK_SIZE + 1))
+    for (uint16_t i = ISOTP_MEM_POOL_SERVICE_BEGIN_IDX; i <= ISOTP_MEM_POOL_SERVICE_END_IDX; i++)
     {
-        if (isotp_pcb_mem_pool[i + ISOTP_PCB_MEM_CHUNK_SIZE] == 0)
+        if (isotp_mem_pool[i] == 0)
         {
-            isotp_pcb_mem_pool[i + ISOTP_PCB_MEM_CHUNK_SIZE] = 0xAA;
+            isotp_mem_pool[i] = 0xAA;
 
-            return &isotp_pcb_mem_pool[i];
+            return (void *)&isotp_mem_pool[(i - ISOTP_MEM_POOL_SERVICE_BEGIN_IDX)  * ISOTP_MEM_CHUNK_SIZE];
         }
     }
 
@@ -49,24 +57,39 @@ static void *isotp_pcb_malloc(void)
 
 static void isotp_pcb_free(void *mem)
 {
-    if (mem == NULL)
+    uint16_t idx;
+
+    uint8_t addr;
+
+    /* Checking an address for inclusion in a memory pool */
+    if (mem == NULL || (uint8_t *)mem < ISOTP_MEM_POOL_BEGIN_ADDR || (uint8_t *)mem > ISOTP_MEM_POOL_END_ADDR)
     {
         return;
     }
 
-    if (((uint8_t *)mem > &isotp_pcb_mem_pool[ISOTP_PCB_MEM_POOL_SIZE - ISOTP_PCB_MEM_CHUNK_SIZE - 1]) || ((uint8_t *)mem < &isotp_pcb_mem_pool[0]))
+    /* get address within memory pool */
+    addr = (uint8_t *)mem - ISOTP_MEM_POOL_BEGIN_ADDR;
+
+    /* check address for multiple of chunk size */
+    if ((addr % ISOTP_MEM_CHUNK_SIZE) != 0)
     {
         return;
     }
 
-    ((uint8_t *)mem)[ISOTP_PCB_MEM_CHUNK_SIZE] = 0;
+    /* get the index of the element which means that the chunk has been allocated */
+    idx = ISOTP_MEM_POOL_SERVICE_BEGIN_IDX + (addr / ISOTP_MEM_CHUNK_SIZE);
+
+    /* freeing the chunk */
+    isotp_mem_pool[idx] = 0;
 }
 
 void isotp_init(void)
 {
-    memset(isotp_pcb_mem_pool, 0, sizeof(isotp_pcb_mem_pool));
+    memset(isotp_mem_pool, 0, sizeof(isotp_mem_pool));
 
     isotp_pcb_list = NULL;
+
+    isotp_pcb_num = 0;
 }
 
 struct isotp_pcb *isotp_new(void)

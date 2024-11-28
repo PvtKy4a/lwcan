@@ -8,11 +8,20 @@ extern "C"
 
 #include <stdint.h>
 
+/** Function prototype for a timeout callback function. Register such a function
+ * using lwcan_timeout().
+ *
+ * @param arg Additional argument to pass to the function - set up by lwcan_timeout()
+ */
+typedef void (* lwcan_timeout_handler)(void *arg);
+
+void lwcan_timeouts_init(void);
+
 void lwcan_check_timeouts(void);
 
-void lwcan_timeout(uint32_t time_ms, void (*handler)(void*), void *arg);
+void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg);
 
-void lwcan_untimeout(void (*handler)(void *), void *arg);
+void lwcan_untimeout(lwcan_timeout_handler handler, void *arg);
 
 #ifdef __cplusplus
 }

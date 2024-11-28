@@ -9,25 +9,33 @@
 
 #include <string.h>
 
-#define CANRAW_PCB_MEM_CHUNK_SIZE sizeof(struct canraw_pcb)
+#define CANRAW_MEM_CHUNK_SIZE sizeof(struct canraw_pcb)
 
-#define CANRAW_PCB_MEM_POOL_SIZE ((CANRAW_PCB_MEM_CHUNK_SIZE * CANRAW_MAX_PCB_NUM) + CANRAW_MAX_PCB_NUM)
+#define CANRAW_MEM_POOL_SIZE (CANRAW_MEM_CHUNK_SIZE * CANRAW_MAX_PCB_NUM)
 
-static uint8_t canraw_pcb_mem_pool[CANRAW_PCB_MEM_POOL_SIZE];
+#define CANRAW_MEM_POOL_BEGIN_ADDR (uint8_t *)(&canraw_mem_pool[0])
+
+#define CANRAW_MEM_POOL_END_ADDR (uint8_t *)(&canraw_mem_pool[CANRAW_MEM_POOL_SIZE - 1])
+
+#define CANRAW_MEM_POOL_SERVICE_BEGIN_IDX CANRAW_MEM_POOL_SIZE
+
+#define CANRAW_MEM_POOL_SERVICE_END_IDX ((CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM) - 1)
+
+static uint8_t canraw_mem_pool[CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM];
 
 static struct canraw_pcb *canraw_pcb_list;
 
-static uint8_t canraw_pcb_num = 0;
+static uint8_t canraw_pcb_num;
 
 static void *canraw_pcb_malloc(void)
 {
-    for (uint16_t i = 0; i < CANRAW_PCB_MEM_POOL_SIZE; i += (CANRAW_PCB_MEM_CHUNK_SIZE + 1))
+    for (uint16_t i = CANRAW_MEM_POOL_SERVICE_BEGIN_IDX; i <= CANRAW_MEM_POOL_SERVICE_END_IDX; i++)
     {
-        if (canraw_pcb_mem_pool[i + CANRAW_PCB_MEM_CHUNK_SIZE] == 0)
+        if (canraw_mem_pool[i] == 0)
         {
-            canraw_pcb_mem_pool[i + CANRAW_PCB_MEM_CHUNK_SIZE] = 0xAA;
+            canraw_mem_pool[i] = 0xAA;
 
-            return &canraw_pcb_mem_pool[i];
+            return (void *)&canraw_mem_pool[(i - CANRAW_MEM_POOL_SERVICE_BEGIN_IDX)  * CANRAW_MEM_CHUNK_SIZE];
         }
     }
 
@@ -36,24 +44,39 @@ static void *canraw_pcb_malloc(void)
 
 static void canraw_pcb_free(void *mem)
 {
-    if (mem == NULL)
+    uint16_t idx;
+
+    uint8_t addr;
+
+    /* Checking an address for inclusion in a memory pool */
+    if (mem == NULL || (uint8_t *)mem < CANRAW_MEM_POOL_BEGIN_ADDR || (uint8_t *)mem > CANRAW_MEM_POOL_END_ADDR)
     {
         return;
     }
 
-    if (((uint8_t *)mem > &canraw_pcb_mem_pool[CANRAW_PCB_MEM_POOL_SIZE - CANRAW_PCB_MEM_CHUNK_SIZE - 1]) || ((uint8_t *)mem < &canraw_pcb_mem_pool[0]))
+    /* get address within memory pool */
+    addr = (uint8_t *)mem - CANRAW_MEM_POOL_BEGIN_ADDR;
+
+    /* check address for multiple of chunk size */
+    if ((addr % CANRAW_MEM_CHUNK_SIZE) != 0)
     {
         return;
     }
 
-    ((uint8_t *)mem)[CANRAW_PCB_MEM_CHUNK_SIZE] = 0;
+    /* get the index of the element which means that the chunk has been allocated */
+    idx = CANRAW_MEM_POOL_SERVICE_BEGIN_IDX + (addr / CANRAW_MEM_CHUNK_SIZE);
+
+    /* freeing the chunk */
+    canraw_mem_pool[idx] = 0;
 }
 
 void canraw_init(void)
 {
-    memset(canraw_pcb_mem_pool, 0, sizeof(canraw_pcb_mem_pool));
+    memset(canraw_mem_pool, 0, sizeof(canraw_mem_pool));
 
     canraw_pcb_list = NULL;
+
+    canraw_pcb_num = 0;
 }
 
 struct canraw_pcb *canraw_new(void)

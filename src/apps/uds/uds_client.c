@@ -93,20 +93,25 @@ static lwcanerr_t uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwc
         goto exit;
     }
 
+    lwcan_untimeout(p2_timer_handler, NULL);
+
     switch (buffer->payload[UDS_SID_OFFSET])
     {
-    case UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC:
-        if (uds_state.state == UDS_WAIT_RESPONSE)
-        {
-            lwcan_untimeout(p2_timer_handler, NULL);
-            lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
-            uds_state.state = UDS_RESPONSE_PENDING;
-        }
-        goto exit;
-
     case UDS_NEGATIVE_RESPONSE_SID:
-        lwcan_untimeout(p2_timer_handler, NULL);
-        lwcan_untimeout(p2_star_timer_handler, NULL);
+        if (buffer->payload[UDS_NRC_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
+        {
+            if (uds_state.state == UDS_WAIT_RESPONSE)
+            {
+                lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
+                uds_state.state = UDS_RESPONSE_PENDING;
+            }
+            goto exit;
+        }
+
+        if (uds_state.state == UDS_RESPONSE_PENDING)
+        {
+            lwcan_untimeout(p2_star_timer_handler, NULL);
+        }
         uds_state.state = UDS_IDLE;
         if (uds_state.context->negative_response != NULL)
         {
@@ -115,13 +120,16 @@ static lwcanerr_t uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwc
         goto exit;
 
     case (UDS_DIAGNOSTIC_SESSION_CONTROL_SID + POSITIVE_RESPOSNE_PADDING):
+        if (uds_state.session == 0)
+        {
+            lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
+        }
         uds_state.session = buffer->payload[UDS_SID_OFFSET + 1];
         uds_state.p2 = buffer->payload[UDS_SID_OFFSET + 2] << 8;
         uds_state.p2 |= buffer->payload[UDS_SID_OFFSET + 3];
         uds_state.p2_star = buffer->payload[UDS_SID_OFFSET + 4] << 8;
         uds_state.p2_star |= buffer->payload[UDS_SID_OFFSET + 5];
-        lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
-        goto positive_response;
+        break;
 
     case (UDS_ECU_RESET_SID + POSITIVE_RESPOSNE_PADDING):
     case (UDS_SECURITY_ACCESS_SID + POSITIVE_RESPOSNE_PADDING):
@@ -132,16 +140,16 @@ static lwcanerr_t uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwc
     case (UDS_CLEAR_DIAGNOSTIC_INFORMATION_SID + POSITIVE_RESPOSNE_PADDING):
     case (UDS_READ_DTC_INFORMATION_SID + POSITIVE_RESPOSNE_PADDING):
     case (UDS_INPUT_OUTPUT_CONTROL_BY_IDENTIFIER_SID + POSITIVE_RESPOSNE_PADDING):
-        goto positive_response;
+        break;
 
     default:
         goto exit;
     }
 
-positive_response:
-    lwcan_untimeout(p2_timer_handler, NULL);
-
-    lwcan_untimeout(p2_star_timer_handler, NULL);
+    if (uds_state.state == UDS_RESPONSE_PENDING)
+    {
+        lwcan_untimeout(p2_star_timer_handler, NULL);
+    }
 
     uds_state.state = UDS_IDLE;
 
