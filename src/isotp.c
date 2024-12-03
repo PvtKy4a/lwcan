@@ -29,14 +29,14 @@ static uint8_t isotp_pcb_num;
 
 #if ISOTP_CANFD
 static const uint8_t padding_length[] = {
-    8, 8, 8, 8, 8, 8, 8, 8, 8,	    /* 0 - 8 */
-    12, 12, 12, 12,			        /* 9 - 12 */
-    16, 16, 16, 16,			        /* 13 - 16 */
-    20, 20, 20, 20,			        /* 17 - 20 */
-    24, 24, 24, 24,			        /* 21 - 24 */
+    8, 8, 8, 8, 8, 8, 8, 8, 8,      /* 0 - 8 */
+    12, 12, 12, 12,                 /* 9 - 12 */
+    16, 16, 16, 16,                 /* 13 - 16 */
+    20, 20, 20, 20,                 /* 17 - 20 */
+    24, 24, 24, 24,                 /* 21 - 24 */
     32, 32, 32, 32, 32, 32, 32, 32, /* 25 - 32 */
-    48, 48, 48, 48, 48, 48, 48, 48,	/* 33 - 40 */
-    48, 48, 48, 48, 48, 48, 48, 48	/* 41 - 48 */
+    48, 48, 48, 48, 48, 48, 48, 48, /* 33 - 40 */
+    48, 48, 48, 48, 48, 48, 48, 48  /* 41 - 48 */
 };
 #endif
 
@@ -48,7 +48,7 @@ static void *isotp_pcb_malloc(void)
         {
             isotp_mem_pool[i] = 0xAA;
 
-            return (void *)&isotp_mem_pool[(i - ISOTP_MEM_POOL_SERVICE_BEGIN_IDX)  * ISOTP_MEM_CHUNK_SIZE];
+            return (void *)&isotp_mem_pool[(i - ISOTP_MEM_POOL_SERVICE_BEGIN_IDX) * ISOTP_MEM_CHUNK_SIZE];
         }
     }
 
@@ -244,6 +244,20 @@ lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_funct
     return ERROR_OK;
 }
 
+lwcanerr_t isotp_set_receive_ff_callback(struct isotp_pcb *pcb, isotp_receive_ff_function receive_ff)
+{
+    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
+    if (pcb == NULL)
+    {
+        return ERROR_ARG;
+    }
+
+    pcb->receive_ff = receive_ff;
+
+    return ERROR_OK;
+}
+
 lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function sent)
 {
     LWCAN_ASSERT("pcb != NULL", pcb != NULL);
@@ -342,7 +356,7 @@ static uint8_t get_padding_length(uint32_t length)
     {
         return 64;
     }
-	
+
     return padding_length[length];
 }
 #endif

@@ -17,9 +17,11 @@ extern "C" {
 
 struct isotp_pcb;
 
-typedef lwcanerr_t (*isotp_receive_function)(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
+typedef void (*isotp_receive_function)(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
-typedef lwcanerr_t (*isotp_sent_function)(void *arg, struct isotp_pcb *pcb, uint32_t length);
+typedef void (*isotp_receive_ff_function)(void *arg, struct isotp_pcb *pcb);
+
+typedef void (*isotp_sent_function)(void *arg, struct isotp_pcb *pcb, uint32_t length);
 
 typedef void (*isotp_error_function)(void *arg, lwcanerr_t error);
 
@@ -50,6 +52,8 @@ struct isotp_pcb
 
     isotp_receive_function receive;
 
+    isotp_receive_ff_function receive_ff;
+
     isotp_sent_function sent;
 
     isotp_error_function error;
@@ -76,6 +80,8 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 lwcanerr_t isotp_received(struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
 lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive);
+
+lwcanerr_t isotp_set_receive_ff_callback(struct isotp_pcb *pcb, isotp_receive_ff_function receive_ff);
 
 lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function sent);
 
