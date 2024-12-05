@@ -14,13 +14,13 @@
 
 #define UDS_NRC_OFFSET 2
 
-#define POSITIVE_RESPOSNE_PADDING 0x40
-
 typedef enum
 {
     UDS_IDLE,
 
     UDS_WAIT_RESPONSE,
+
+    UDS_WAIT_SEGMENTED_RESPONSE,
 
     UDS_RESPONSE_PENDING,
 } uds_state_t;
@@ -30,8 +30,6 @@ struct uds_state
     uint8_t state;
 
     uint8_t session;
-
-    uint8_t sa_level;
 
     uint16_t p2;
 
@@ -51,11 +49,14 @@ static void s3_client_timer_handler(void *arg)
     (void)arg;
 
 #if UDS_KEEP_SESSION
-    uds_tester_present_service(UDS_KEEP_SESSION_SUB);
+    uint8_t request[2];
+
+    request[0] = UDS_TESTER_PRESENT_SID;
+    request[1] = UDS_KEEP_SESSION_SUB;
+
+    uds_send_request(request, sizeof(request));
 #else
     uds_state.session = 0;
-
-    uds_state.sa_level = 0;
 #endif
 }
 
@@ -83,7 +84,7 @@ static void p2_star_timer_handler(void *arg)
     }
 }
 
-static lwcanerr_t uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buffer *buffer)
+static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buffer *buffer)
 {
     (void)arg;
     (void)isotp_pcb;
@@ -93,80 +94,97 @@ static lwcanerr_t uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwc
         goto exit;
     }
 
-    lwcan_untimeout(p2_timer_handler, NULL);
-
-    switch (buffer->payload[UDS_SID_OFFSET])
+    if (uds_state.state == UDS_WAIT_RESPONSE)
     {
-    case UDS_NEGATIVE_RESPONSE_SID:
+        lwcan_untimeout(p2_timer_handler, NULL);
+    }
+
+    if (buffer->payload[UDS_SID_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
+    {
         if (buffer->payload[UDS_NRC_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
         {
-            if (uds_state.state == UDS_WAIT_RESPONSE)
+            if (uds_state.state != UDS_RESPONSE_PENDING)
             {
                 lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
+
                 uds_state.state = UDS_RESPONSE_PENDING;
             }
-            goto exit;
-        }
+            else
+            {
+                lwcan_untimeout(p2_star_timer_handler, NULL);
 
+                lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
+            }
+        }
+        else
+        {
+            if (uds_state.state == UDS_RESPONSE_PENDING)
+            {
+                lwcan_untimeout(p2_star_timer_handler, NULL);
+            }
+
+            uds_state.state = UDS_IDLE;
+
+            if (uds_state.context->negative_response != NULL)
+            {
+                uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
+            }
+        }
+    }
+    else
+    {
         if (uds_state.state == UDS_RESPONSE_PENDING)
         {
             lwcan_untimeout(p2_star_timer_handler, NULL);
         }
+
+        if (buffer->payload[UDS_SID_OFFSET] == (UDS_DIAGNOSTIC_SESSION_CONTROL_SID | UDS_POSITIVE_RESPOSNE_PADDING))
+        {
+            if (uds_state.session == 0)
+            {
+                lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
+            }
+
+            uds_state.session = buffer->payload[1];
+
+            uds_state.p2 = buffer->payload[2] << 8;
+            uds_state.p2 |= buffer->payload[3];
+
+            uds_state.p2_star = buffer->payload[4] << 8;
+            uds_state.p2_star |= buffer->payload[5];
+        }
+
         uds_state.state = UDS_IDLE;
-        if (uds_state.context->negative_response != NULL)
+
+        if (uds_state.context->positive_response != NULL)
         {
-            uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
+            uds_state.context->positive_response(uds_state.handle, buffer->payload, buffer->length);
         }
-        goto exit;
-
-    case (UDS_DIAGNOSTIC_SESSION_CONTROL_SID + POSITIVE_RESPOSNE_PADDING):
-        if (uds_state.session == 0)
-        {
-            lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
-        }
-        uds_state.session = buffer->payload[UDS_SID_OFFSET + 1];
-        uds_state.p2 = buffer->payload[UDS_SID_OFFSET + 2] << 8;
-        uds_state.p2 |= buffer->payload[UDS_SID_OFFSET + 3];
-        uds_state.p2_star = buffer->payload[UDS_SID_OFFSET + 4] << 8;
-        uds_state.p2_star |= buffer->payload[UDS_SID_OFFSET + 5];
-        break;
-
-    case (UDS_ECU_RESET_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_SECURITY_ACCESS_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_READ_DATA_BY_LOCAL_IDENTIFIER_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_READ_DATA_BY_IDENTIFIER_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_WRITE_DATA_BY_IDENTIFIER_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_ROUTINE_CONTROL_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_CLEAR_DIAGNOSTIC_INFORMATION_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_READ_DTC_INFORMATION_SID + POSITIVE_RESPOSNE_PADDING):
-    case (UDS_INPUT_OUTPUT_CONTROL_BY_IDENTIFIER_SID + POSITIVE_RESPOSNE_PADDING):
-        break;
-
-    default:
-        goto exit;
-    }
-
-    if (uds_state.state == UDS_RESPONSE_PENDING)
-    {
-        lwcan_untimeout(p2_star_timer_handler, NULL);
-    }
-
-    uds_state.state = UDS_IDLE;
-
-    if (uds_state.context->positive_response != NULL)
-    {
-        uds_state.context->positive_response(uds_state.handle, (buffer->payload[UDS_SID_OFFSET] - POSITIVE_RESPOSNE_PADDING), (buffer->payload + 1), (buffer->length - 1));
     }
 
 exit:
     isotp_received(isotp_pcb, buffer);
+}
 
-    return ERROR_OK;
+static void uds_receive_ff(void *arg, struct isotp_pcb *isotp_pcb)
+{
+    (void)arg;
+    (void)isotp_pcb;
+
+    lwcan_untimeout(p2_timer_handler, NULL);
+
+    uds_state.state = UDS_WAIT_SEGMENTED_RESPONSE;
 }
 
 static void uds_error(void *arg, lwcanerr_t error)
 {
     (void)arg;
+
+    uds_state.state = UDS_IDLE;
+
+    lwcan_untimeout(p2_timer_handler, NULL);
+
+    lwcan_untimeout(p2_star_timer_handler, NULL);
 
     if (uds_state.context->error != NULL)
     {
@@ -174,14 +192,9 @@ static void uds_error(void *arg, lwcanerr_t error)
     }
 }
 
-lwcanerr_t uds_client_init(const struct uds_context *context, void *handle)
+lwcanerr_t uds_client_init(void)
 {
     struct isotp_pcb *isotp_pcb;
-
-    if (context == NULL)
-    {
-        return ERROR_ARG;
-    }
 
     isotp_pcb = isotp_new();
 
@@ -194,13 +207,11 @@ lwcanerr_t uds_client_init(const struct uds_context *context, void *handle)
 
     isotp_set_receive_callback(isotp_pcb, uds_receive);
 
+    isotp_set_receive_ff_callback(isotp_pcb, uds_receive_ff);
+
     isotp_set_error_callback(isotp_pcb, uds_error);
 
     uds_state.isotp_pcb = isotp_pcb;
-
-    uds_state.context = context;
-
-    uds_state.handle = handle;
 
     uds_state.p2 = UDS_P2_DEFAULT;
 
@@ -222,30 +233,21 @@ void uds_client_cleanup(void)
     memset(&uds_state, 0, sizeof(uds_state));
 }
 
-static lwcanerr_t send_request(uint8_t *data, uint32_t size)
+lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
 {
-    lwcanerr_t ret;
-
-    if (uds_state.session != 0)
+    if (context == NULL)
     {
-        lwcan_untimeout(s3_client_timer_handler, NULL);
+        return ERROR_ARG;
     }
 
-    ret = isotp_send(uds_state.isotp_pcb, data, size);
-
-    if (ret != ERROR_OK)
+    if (uds_state.state != UDS_IDLE)
     {
-        return ret;
+        return ERROR_INPROGRESS;
     }
 
-    uds_state.state = UDS_WAIT_RESPONSE;
+    uds_state.context = context;
 
-    lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
-
-    if (uds_state.session != 0)
-    {
-        lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
-    }
+    uds_state.handle = handle;
 
     return ERROR_OK;
 }
@@ -273,11 +275,10 @@ lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t ses
         return ret;
     }
 
-    data[UDS_SID_OFFSET] = UDS_DIAGNOSTIC_SESSION_CONTROL_SID;
+    data[0] = UDS_DIAGNOSTIC_SESSION_CONTROL_SID;
+    data[1] = session_type;
 
-    data[UDS_SID_OFFSET + 1] = session_type;
-
-    return send_request(data, sizeof(data));
+    return uds_send_request(data, sizeof(data));
 }
 
 uint8_t uds_get_active_session(void)
@@ -285,261 +286,45 @@ uint8_t uds_get_active_session(void)
     return uds_state.session;
 }
 
-lwcanerr_t uds_reset_service(uint8_t sub_function)
+lwcanerr_t uds_send_request(const uint8_t *request, uint32_t size)
 {
-    uint8_t data[2];
-
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_ECU_RESET_SID;
-
-    data[UDS_SID_OFFSET + 1] = sub_function;
-
-    return send_request(data, sizeof(data));
-}
-
-lwcanerr_t uds_security_access_service(uint8_t sub_function, const uint8_t *parameter, uint8_t size)
-{
-    uint8_t *data;
-
     lwcanerr_t ret;
 
-    if (uds_state.state != UDS_IDLE)
+    if (request == NULL || size == 0)
     {
-        return ERROR_INPROGRESS;
+        return ERROR_ARG;
     }
-
-    data = (uint8_t *)lwcan_malloc(size + 2);
-
-    if (data == NULL)
-    {
-        return ERROR_MEMORY;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_SECURITY_ACCESS_SID;
-
-    data[UDS_SID_OFFSET + 1] = sub_function;
-
-    memcpy(data + UDS_SID_OFFSET + 2, parameter, size);
-
-    ret = send_request(data, size + 2);
-
-    lwcan_free(data);
-
-    return ret;
-}
-
-void uds_set_sa_level(uint8_t level)
-{
-    uds_state.sa_level = level;
-}
-
-uint8_t uds_get_sa_level(void)
-{
-    return uds_state.sa_level;
-}
-
-lwcanerr_t uds_tester_present_service(uint8_t sub_function)
-{
-    uint8_t data[2];
 
     if (uds_state.state != UDS_IDLE)
     {
         return ERROR_INPROGRESS;
     }
 
-    data[UDS_SID_OFFSET] = UDS_TESTER_PRESENT_SID;
-
-    data[UDS_SID_OFFSET + 1] = sub_function;
-
-    return send_request(data, sizeof(data));
-}
-
-lwcanerr_t uds_rdbli_service(uint8_t data_identifier)
-{
-    uint8_t data[2];
-
-    if (uds_state.state != UDS_IDLE)
+    if (uds_state.session != 0)
     {
-        return ERROR_INPROGRESS;
+        lwcan_untimeout(s3_client_timer_handler, NULL);
     }
 
-    data[UDS_SID_OFFSET] = UDS_READ_DATA_BY_LOCAL_IDENTIFIER_SID;
+    ret = isotp_send(uds_state.isotp_pcb, request, size);
 
-    data[UDS_SID_OFFSET + 1] = data_identifier;
-
-    return send_request(data, sizeof(data));
-}
-
-lwcanerr_t uds_rdbi_service(uint16_t data_identifier)
-{
-    uint8_t data[3];
-
-    if (uds_state.state != UDS_IDLE)
+    if (ret != ERROR_OK)
     {
-        return ERROR_INPROGRESS;
+        return ret;
     }
 
-    data[UDS_SID_OFFSET] = UDS_READ_DATA_BY_IDENTIFIER_SID;
+    uds_state.state = UDS_WAIT_RESPONSE;
 
-    data[UDS_SID_OFFSET + 1] = (uint8_t)(data_identifier >> 8) & (uint8_t)0xFF;
-
-    data[UDS_SID_OFFSET + 2] = (uint8_t)data_identifier & (uint8_t)0xFF;
-
-    return send_request(data, sizeof(data));
-}
-
-lwcanerr_t uds_wdbi_service(uint16_t data_identifier, const uint8_t *data_record, uint8_t size)
-{
-    uint8_t *data;
-
-    lwcanerr_t ret;
-
-    if (uds_state.state != UDS_IDLE)
+    if (request[0] == UDS_TESTER_PRESENT_SID && request[1] != 0x80)
     {
-        return ERROR_INPROGRESS;
+        lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
     }
 
-    data = (uint8_t *)lwcan_malloc(size + 3);
-
-    if (data == NULL)
+    if (uds_state.session != 0)
     {
-        return ERROR_MEMORY;
+        lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
     }
 
-    data[UDS_SID_OFFSET] = UDS_WRITE_DATA_BY_IDENTIFIER_SID;
-
-    data[UDS_SID_OFFSET + 1] = (uint8_t)(data_identifier >> 8) & (uint8_t)0xFF;
-
-    data[UDS_SID_OFFSET + 2] = (uint8_t)data_identifier & (uint8_t)0xFF;
-
-    memcpy(data + UDS_SID_OFFSET + 3, data_record, size);
-
-    ret = send_request(data, size + 3);
-
-    lwcan_free(data);
-
-    return ret;
-}
-
-lwcanerr_t uds_routine_control_service(uint8_t sub_function, uint16_t routine_identifier, const uint8_t *option, uint8_t size)
-{
-    uint8_t *data;
-
-    lwcanerr_t ret;
-
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
-    data = (uint8_t *)lwcan_malloc(size + 4);
-
-    if (data == NULL)
-    {
-        return ERROR_MEMORY;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_ROUTINE_CONTROL_SID;
-
-    data[UDS_SID_OFFSET + 1] = sub_function;
-
-    data[UDS_SID_OFFSET + 2] = (uint8_t)(routine_identifier >> 8) & (uint8_t)0xFF;
-
-    data[UDS_SID_OFFSET + 3] = (uint8_t)routine_identifier & (uint8_t)0xFF;
-
-    memcpy(data + UDS_SID_OFFSET + 4, option, size);
-
-    ret = send_request(data, size + 4);
-
-    lwcan_free(data);
-
-    return ret;
-}
-
-lwcanerr_t uds_clear_dtc_service(const uint8_t *dtc, uint8_t size)
-{
-    uint8_t *data;
-
-    lwcanerr_t ret;
-
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
-    data = (uint8_t *)lwcan_malloc(size + 1);
-
-    if (data == NULL)
-    {
-        return ERROR_MEMORY;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_CLEAR_DIAGNOSTIC_INFORMATION_SID;
-
-    memcpy(data + UDS_SID_OFFSET + 1, dtc, size);
-
-    ret = send_request(data, size + 1);
-
-    lwcan_free(data);
-
-    return ret;
-}
-
-lwcanerr_t uds_read_dtc_service(uint8_t sub_function, uint8_t mask)
-{
-    uint8_t data[3];
-
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_READ_DTC_INFORMATION_SID;
-
-    data[UDS_SID_OFFSET + 1] = sub_function;
-
-    data[UDS_SID_OFFSET + 2] = mask;
-
-    return send_request(data, sizeof(data));
-}
-
-lwcanerr_t uds_iocbi_service(uint16_t data_identifier, uint8_t parameter, const uint8_t *state, uint8_t size)
-{
-    uint8_t *data;
-
-    lwcanerr_t ret;
-
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
-    data = (uint8_t *)lwcan_malloc(size + 4);
-
-    if (data == NULL)
-    {
-        return ERROR_MEMORY;
-    }
-
-    data[UDS_SID_OFFSET] = UDS_ROUTINE_CONTROL_SID;
-
-    data[UDS_SID_OFFSET + 1] = (uint8_t)(data_identifier >> 8) & (uint8_t)0xFF;
-
-    data[UDS_SID_OFFSET + 2] = (uint8_t)data_identifier & (uint8_t)0xFF;
-
-    data[UDS_SID_OFFSET + 3] = parameter;
-
-    memcpy(data + UDS_SID_OFFSET + 4, state, size);
-
-    ret = send_request(data, size + 4);
-
-    lwcan_free(data);
-
-    return ret;
+    return ERROR_OK;
 }
 
 #endif

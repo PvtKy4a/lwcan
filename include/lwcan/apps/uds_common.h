@@ -9,6 +9,8 @@ extern "C" {
 
 #include <stdint.h>
 
+#define UDS_POSITIVE_RESPOSNE_PADDING 0x40
+
 /* UDS Services */
 #define UDS_DIAGNOSTIC_SESSION_CONTROL_SID           0x10   
 #define UDS_ECU_RESET_SID                            0x11
@@ -40,9 +42,9 @@ extern "C" {
 
 struct uds_context
 {
-    void (*request)(void *handle, uint8_t sid, uint8_t *data, uint32_t size);
+    void (*request)(void *handle, uint8_t sid, uint8_t *data, uint32_t size); /* not implemented */
 
-    void (*positive_response)(void *handle, uint8_t sid, uint8_t *data, uint32_t size);
+    void (*positive_response)(void *handle, uint8_t *data, uint32_t size);
 
     void (*negative_response)(void *handle, uint8_t rejected_sid, uint8_t nrc);
 
