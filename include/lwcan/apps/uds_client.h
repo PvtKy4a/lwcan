@@ -19,6 +19,8 @@ lwcanerr_t uds_set_context(const struct uds_context *context, void *handle);
 
 lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type);
 
+void uds_close_diagnostic_session(void);
+
 uint8_t uds_get_active_session(void);
 
 lwcanerr_t uds_send_request(const uint8_t *request, uint32_t size);

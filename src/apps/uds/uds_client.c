@@ -281,6 +281,19 @@ lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t ses
     return uds_send_request(data, sizeof(data));
 }
 
+void uds_close_diagnostic_session(void)
+{
+    uds_state.state = UDS_IDLE;
+
+    lwcan_untimeout(s3_client_timer_handler, NULL);
+
+    uds_state.session = 0;
+
+    uds_state.p2 = UDS_P2_DEFAULT;
+
+    uds_state.p2_star = UDS_P2_STAR_DEFAULT;
+}
+
 uint8_t uds_get_active_session(void)
 {
     return uds_state.session;
