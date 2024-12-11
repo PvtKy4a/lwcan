@@ -2,7 +2,8 @@
 #define LWCAN_MEMORY_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <string.h>

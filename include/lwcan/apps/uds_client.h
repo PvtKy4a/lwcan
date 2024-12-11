@@ -2,7 +2,8 @@
 #define UDS_CLIENT_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "lwcan/apps/uds_common.h"
@@ -23,7 +24,7 @@ void uds_close_diagnostic_session(void);
 
 uint8_t uds_get_active_session(void);
 
-lwcanerr_t uds_send_request(const uint8_t *request, uint32_t size);
+lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response);
 
 #ifdef __cplusplus
 }

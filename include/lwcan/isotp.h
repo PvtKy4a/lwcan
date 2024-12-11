@@ -2,7 +2,8 @@
 #define LWCAN_ISOTP_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "lwcan/options.h"

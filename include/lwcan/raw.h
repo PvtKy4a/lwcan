@@ -2,7 +2,8 @@
 #define LWCAN_RAW_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "lwcan/options.h"
@@ -40,7 +41,7 @@ struct canraw_pcb *canraw_new(void);
 
 lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr);
 
-lwcanerr_t canraw_close(struct canraw_pcb *pcb);
+lwcanerr_t canraw_remove(struct canraw_pcb *pcb);
 
 lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size);
 

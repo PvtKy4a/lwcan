@@ -54,7 +54,7 @@ static void s3_client_timer_handler(void *arg)
     request[0] = UDS_TESTER_PRESENT_SID;
     request[1] = UDS_KEEP_SESSION_SUB;
 
-    uds_send_request(request, sizeof(request));
+    uds_send_request(request, sizeof(request), UDS_SUPPRESS_KEEP_SESSION_RESPONSE);
 #else
     uds_state.session = 0;
 #endif
@@ -192,6 +192,11 @@ static void uds_error(void *arg, lwcanerr_t error)
     }
 }
 
+/**
+ * @brief initialize UDS client
+ * 
+ * @return error code
+ */
 lwcanerr_t uds_client_init(void)
 {
     struct isotp_pcb *isotp_pcb;
@@ -220,6 +225,11 @@ lwcanerr_t uds_client_init(void)
     return ERROR_OK;
 }
 
+/**
+ * @brief returns the UDS client to its original state
+ * (after this, the client must be initialized)
+ * 
+ */
 void uds_client_cleanup(void)
 {
     isotp_remove(uds_state.isotp_pcb);
@@ -233,6 +243,14 @@ void uds_client_cleanup(void)
     memset(&uds_state, 0, sizeof(uds_state));
 }
 
+/**
+ * @brief set UDS session context
+ * (can be changed during an active session if there is no communication at the moment)
+ *
+ * @param context session context
+ * @param handle context handle
+ * @return error code
+ */
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
 {
     if (context == NULL)
@@ -252,6 +270,13 @@ lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
     return ERROR_OK;
 }
 
+/**
+ * @brief start UDS session
+ *
+ * @param addr server address
+ * @param session_type required session
+ * @return error code
+ */
 lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type)
 {
     uint8_t data[2];
@@ -278,9 +303,13 @@ lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t ses
     data[0] = UDS_DIAGNOSTIC_SESSION_CONTROL_SID;
     data[1] = session_type;
 
-    return uds_send_request(data, sizeof(data));
+    return uds_send_request(data, sizeof(data), 1);
 }
 
+/**
+ * @brief close active session (immediately)
+ *
+ */
 void uds_close_diagnostic_session(void)
 {
     uds_state.state = UDS_IDLE;
@@ -294,12 +323,25 @@ void uds_close_diagnostic_session(void)
     uds_state.p2_star = UDS_P2_STAR_DEFAULT;
 }
 
+/**
+ * @brief get active UDS session
+ *
+ * @return uds session
+ */
 uint8_t uds_get_active_session(void)
 {
     return uds_state.session;
 }
 
-lwcanerr_t uds_send_request(const uint8_t *request, uint32_t size)
+/**
+ * @brief send uds request
+ *
+ * @param request pre-formed request according to the used UDS implementation (e.g. {0x31, 0x01, 0x00, 0x04, 0x11})
+ * @param size request size
+ * @param with_response 0 if there is no response to the request, or >0 if there is a response to the request
+ * @return error code
+ */
+lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response)
 {
     lwcanerr_t ret;
 
@@ -325,10 +367,10 @@ lwcanerr_t uds_send_request(const uint8_t *request, uint32_t size)
         return ret;
     }
 
-    uds_state.state = UDS_WAIT_RESPONSE;
-
-    if (request[0] == UDS_TESTER_PRESENT_SID && request[1] != 0x80)
+    if (with_response)
     {
+        uds_state.state = UDS_WAIT_RESPONSE;
+
         lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
     }
 

@@ -2,7 +2,8 @@
 #define LWCAN_OPTIONS_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "lwcan_options.h"

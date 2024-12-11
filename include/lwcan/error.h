@@ -2,7 +2,8 @@
 #define LWCAN_ERROR_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <stdint.h>

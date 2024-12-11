@@ -2,7 +2,8 @@
 #define UDS_COMMON_H
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include "lwcan/error.h"

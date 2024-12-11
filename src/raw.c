@@ -133,7 +133,7 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
     return ERROR_OK;
 }
 
-lwcanerr_t canraw_close(struct canraw_pcb *pcb)
+lwcanerr_t canraw_remove(struct canraw_pcb *pcb)
 {
     struct canraw_pcb *pcb_temp;
 
