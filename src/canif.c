@@ -170,8 +170,9 @@ lwcanerr_t canif_set_bitrate(struct canif *canif, uint32_t bitrate)
 lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter)
 {
     LWCAN_ASSERT("canif != NULL", canif != NULL);
+    LWCAN_ASSERT("filter != NULL", filter != NULL);
 
-    if (canif == NULL)
+    if (canif == NULL || filter == NULL)
     {
         return ERROR_ARG;
     }
@@ -187,8 +188,9 @@ lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter)
 lwcanerr_t canif_get_name(struct canif *canif, char *name)
 {
     LWCAN_ASSERT("canif != NULL", canif != NULL);
+    LWCAN_ASSERT("name != NULL", name != NULL);
 
-    if (canif == NULL)
+    if (canif == NULL || name == NULL)
     {
         return ERROR_ARG;
     }

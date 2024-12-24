@@ -66,7 +66,7 @@ static void p2_timer_handler(void *arg)
 
     uds_state.state = UDS_IDLE;
 
-    if (uds_state.context->error != NULL)
+    if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
     }
@@ -78,7 +78,7 @@ static void p2_star_timer_handler(void *arg)
 
     uds_state.state = UDS_IDLE;
 
-    if (uds_state.context->error != NULL)
+    if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
     }
@@ -125,7 +125,7 @@ static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buf
 
             uds_state.state = UDS_IDLE;
 
-            if (uds_state.context->negative_response != NULL)
+            if (uds_state.context != NULL && uds_state.context->negative_response != NULL)
             {
                 uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
             }
@@ -156,7 +156,7 @@ static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buf
 
         uds_state.state = UDS_IDLE;
 
-        if (uds_state.context->positive_response != NULL)
+        if (uds_state.context != NULL && uds_state.context->positive_response != NULL)
         {
             uds_state.context->positive_response(uds_state.handle, buffer->payload, buffer->length);
         }
@@ -186,7 +186,7 @@ static void uds_error(void *arg, lwcanerr_t error)
 
     lwcan_untimeout(p2_star_timer_handler, NULL);
 
-    if (uds_state.context->error != NULL)
+    if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, error);
     }
@@ -253,11 +253,6 @@ void uds_client_cleanup(void)
  */
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
 {
-    if (context == NULL)
-    {
-        return ERROR_ARG;
-    }
-
     if (uds_state.state != UDS_IDLE)
     {
         return ERROR_INPROGRESS;
