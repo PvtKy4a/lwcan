@@ -421,8 +421,6 @@ void isotp_input(struct canif *canif, void *frame)
 
     if (pcb == NULL)
     {
-        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
         return;
     }
 
