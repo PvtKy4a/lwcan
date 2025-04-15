@@ -18,18 +18,20 @@ typedef enum
 {
     UDS_IDLE,
 
+    UDS_CONNECTING,
+
     UDS_WAIT_RESPONSE,
 
     UDS_WAIT_SEGMENTED_RESPONSE,
 
-    UDS_RESPONSE_PENDING,
+    UDS_RESPONSE_PENDING
 } uds_state_t;
 
 struct uds_state
 {
     uint8_t state;
 
-    uint8_t session;
+    uint8_t is_connected;
 
     uint16_t p2;
 
@@ -44,7 +46,7 @@ struct uds_state
 
 static struct uds_state uds_state;
 
-static void s3_client_timer_handler(void *arg)
+static void s3_timer_handler(void *arg)
 {
     (void)arg;
 
@@ -52,11 +54,17 @@ static void s3_client_timer_handler(void *arg)
     uint8_t request[2];
 
     request[0] = UDS_TESTER_PRESENT_SID;
-    request[1] = UDS_KEEP_SESSION_SUB;
+    request[1] = UDS_KEEP_SESSION_SUPPRESS;
 
-    uds_send_request(request, sizeof(request), UDS_SUPPRESS_KEEP_SESSION_RESPONSE);
+    isotp_send(uds_state.isotp_pcb, request, sizeof(request));
+
+    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
 #else
-    uds_state.session = 0;
+    uds_state.is_connected = 0;
+
+    uds_state.p2 = UDS_P2_DEFAULT;
+
+    uds_state.p2_star = UDS_P2_STAR_DEFAULT;
 #endif
 }
 
@@ -64,23 +72,63 @@ static void p2_timer_handler(void *arg)
 {
     (void)arg;
 
-    uds_state.state = UDS_IDLE;
-
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
     }
+
+    uds_state.state = UDS_IDLE;
 }
 
 static void p2_star_timer_handler(void *arg)
 {
     (void)arg;
 
-    uds_state.state = UDS_IDLE;
-
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
+    }
+
+    uds_state.state = UDS_IDLE;
+}
+
+static void handle_negative_response(struct lwcan_buffer *buffer)
+{
+    if (uds_state.state == UDS_CONNECTING)
+    {
+        return;
+    }
+
+    if (buffer->payload[UDS_NRC_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
+    {
+        if (uds_state.state != UDS_RESPONSE_PENDING)
+        {
+            uds_state.state = UDS_RESPONSE_PENDING;
+        }
+
+        lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
+
+        return;
+    }
+
+    if (uds_state.context != NULL && uds_state.context->negative_response != NULL)
+    {
+        uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
+    }
+}
+
+static void handle_positive_response(struct lwcan_buffer *buffer)
+{
+    if (uds_state.state == UDS_CONNECTING)
+    {
+        uds_state.is_connected = 1;
+
+        return;
+    }
+
+    if (uds_state.context != NULL && uds_state.context->positive_response != NULL)
+    {
+        uds_state.context->positive_response(uds_state.handle, buffer->payload, buffer->length);
     }
 }
 
@@ -94,76 +142,31 @@ static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buf
         goto exit;
     }
 
-    if (uds_state.state == UDS_WAIT_RESPONSE)
+    switch (uds_state.state)
     {
+    case UDS_WAIT_RESPONSE:
         lwcan_untimeout(p2_timer_handler, NULL);
+        break;
+    case UDS_RESPONSE_PENDING:
+        lwcan_untimeout(p2_star_timer_handler, NULL);
+        break;
+    default:
+        break;
     }
 
-    if (buffer->payload[UDS_SID_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
+    if (buffer->payload[UDS_SID_OFFSET] == UDS_NEGATIVE_RESPONSE_SID)
     {
-        if (buffer->payload[UDS_NRC_OFFSET] == UDS_REQUEST_RECEIVED_RESPONSE_PENDING_NRC)
-        {
-            if (uds_state.state != UDS_RESPONSE_PENDING)
-            {
-                lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
-
-                uds_state.state = UDS_RESPONSE_PENDING;
-            }
-            else
-            {
-                lwcan_untimeout(p2_star_timer_handler, NULL);
-
-                lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
-            }
-        }
-        else
-        {
-            if (uds_state.state == UDS_RESPONSE_PENDING)
-            {
-                lwcan_untimeout(p2_star_timer_handler, NULL);
-            }
-
-            uds_state.state = UDS_IDLE;
-
-            if (uds_state.context != NULL && uds_state.context->negative_response != NULL)
-            {
-                uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
-            }
-        }
+        handle_negative_response(buffer);
     }
-    else
+    else if (buffer->payload[UDS_SID_OFFSET] >= 0x50 && buffer->payload[UDS_SID_OFFSET] <= 0x7E)
     {
-        if (uds_state.state == UDS_RESPONSE_PENDING)
-        {
-            lwcan_untimeout(p2_star_timer_handler, NULL);
-        }
-
-        if (buffer->payload[UDS_SID_OFFSET] == (UDS_DIAGNOSTIC_SESSION_CONTROL_SID | UDS_POSITIVE_RESPOSNE_PADDING))
-        {
-            if (uds_state.session == 0)
-            {
-                lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
-            }
-
-            uds_state.session = buffer->payload[1];
-
-            uds_state.p2 = buffer->payload[2] << 8;
-            uds_state.p2 |= buffer->payload[3];
-
-            uds_state.p2_star = buffer->payload[4] << 8;
-            uds_state.p2_star |= buffer->payload[5];
-        }
-
-        uds_state.state = UDS_IDLE;
-
-        if (uds_state.context != NULL && uds_state.context->positive_response != NULL)
-        {
-            uds_state.context->positive_response(uds_state.handle, buffer->payload, buffer->length);
-        }
+        handle_positive_response(buffer);
     }
 
 exit:
     isotp_received(isotp_pcb, buffer);
+
+    uds_state.state = UDS_IDLE;
 }
 
 static void uds_receive_ff(void *arg, struct isotp_pcb *isotp_pcb)
@@ -171,7 +174,22 @@ static void uds_receive_ff(void *arg, struct isotp_pcb *isotp_pcb)
     (void)arg;
     (void)isotp_pcb;
 
-    lwcan_untimeout(p2_timer_handler, NULL);
+    if (uds_state.state == UDS_IDLE)
+    {
+        return;
+    }
+
+    switch (uds_state.state)
+    {
+    case UDS_WAIT_RESPONSE:
+        lwcan_untimeout(p2_timer_handler, NULL);
+        break;
+    case UDS_RESPONSE_PENDING:
+        lwcan_untimeout(p2_star_timer_handler, NULL);
+        break;
+    default:
+        break;
+    }
 
     uds_state.state = UDS_WAIT_SEGMENTED_RESPONSE;
 }
@@ -180,22 +198,35 @@ static void uds_error(void *arg, lwcanerr_t error)
 {
     (void)arg;
 
-    uds_state.state = UDS_IDLE;
+    if (uds_state.state == UDS_IDLE)
+    {
+        return;
+    }
 
-    lwcan_untimeout(p2_timer_handler, NULL);
-
-    lwcan_untimeout(p2_star_timer_handler, NULL);
+    switch (uds_state.state)
+    {
+    case UDS_WAIT_RESPONSE:
+        lwcan_untimeout(p2_timer_handler, NULL);
+        break;
+    case UDS_RESPONSE_PENDING:
+        lwcan_untimeout(p2_star_timer_handler, NULL);
+        break;
+    default:
+        break;
+    }
 
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, error);
     }
+
+    uds_state.state = UDS_IDLE;
 }
 
 /**
- * @brief initialize UDS client
- * 
- * @return error code
+ * @brief Initialize UDS client
+ *
+ * @return 0 if success or error code
  */
 lwcanerr_t uds_client_init(void)
 {
@@ -208,13 +239,13 @@ lwcanerr_t uds_client_init(void)
         return ERROR_MEMORY;
     }
 
-    memset(&uds_state, 0, sizeof(struct uds_state));
-
     isotp_set_receive_callback(isotp_pcb, uds_receive);
 
     isotp_set_receive_ff_callback(isotp_pcb, uds_receive_ff);
 
     isotp_set_error_callback(isotp_pcb, uds_error);
+
+    memset(&uds_state, 0, sizeof(struct uds_state));
 
     uds_state.isotp_pcb = isotp_pcb;
 
@@ -226,30 +257,152 @@ lwcanerr_t uds_client_init(void)
 }
 
 /**
- * @brief returns the UDS client to its original state
- * (after this, the client must be initialized)
- * 
+ * @brief Deinitialize UDS client
+ *
+ * @return 0 if success or error code
  */
-void uds_client_cleanup(void)
+lwcanerr_t uds_client_deinit(void)
 {
+    if (uds_state.state != UDS_IDLE)
+    {
+        return ERROR_INPROGRESS;
+    }
+
     isotp_remove(uds_state.isotp_pcb);
 
-    lwcan_untimeout(p2_timer_handler, NULL);
-
-    lwcan_untimeout(p2_star_timer_handler, NULL);
-
-    lwcan_untimeout(s3_client_timer_handler, NULL);
+    if (uds_state.is_connected)
+    {
+        lwcan_untimeout(s3_timer_handler, NULL);
+    }
 
     memset(&uds_state, 0, sizeof(uds_state));
+
+    return ERROR_OK;
+}
+
+static void connect_retry_timeout(void *arg)
+{
+    uint8_t *delay = (uint8_t *)arg;
+
+    *delay = 0;
+}
+
+static lwcanerr_t try_connect(void)
+{
+    volatile uint8_t delay;
+
+    uint8_t request[2];
+
+    lwcanerr_t ret;
+
+    request[0] = UDS_TESTER_PRESENT_SID;
+    request[1] = 0; // Not suppress positive response
+
+    for (uint16_t i = 0; i < UDS_CONNECT_RETRY_NUM; i++)
+    {
+        uds_state.state = UDS_CONNECTING;
+
+        ret = isotp_send(uds_state.isotp_pcb, request, sizeof(request));
+
+        if (ret != ERROR_OK)
+        {
+            goto retry;
+        }
+
+        while (uds_state.state == UDS_CONNECTING)
+        {
+        }
+
+        if (uds_state.is_connected)
+        {
+            ret = ERROR_OK;
+
+            goto exit;
+        }
+
+    retry:
+        delay = 1;
+
+        lwcan_timeout(UDS_CONNECT_RETRY_TIMEOUT, connect_retry_timeout, (void *)&delay);
+
+        while (delay)
+        {
+        }
+    }
+
+    ret = ERROR_ABORTED;
+
+exit:
+    while (uds_state.state != UDS_IDLE)
+    {
+    }
+
+    return ret;
 }
 
 /**
- * @brief set UDS session context
+ * @brief Connect to server
+ *
+ * @param addr server address
+ * @return 0 if success or error code
+ */
+lwcanerr_t uds_client_connect(const struct addr_can *addr)
+{
+    lwcanerr_t ret;
+
+    if (uds_state.state != UDS_IDLE)
+    {
+        return ERROR_INPROGRESS;
+    }
+
+    ret = isotp_bind(uds_state.isotp_pcb, addr);
+
+    if (ret != ERROR_OK)
+    {
+        goto exit;
+    }
+
+    ret = try_connect();
+
+exit:
+    return ret;
+}
+
+/**
+ * @brief Disconnect from server
+ *
+ * @return 0 if success or error code
+ */
+lwcanerr_t uds_client_disconnect(void)
+{
+    if (uds_state.state != UDS_IDLE)
+    {
+        return ERROR_INPROGRESS;
+    }
+
+    if (!uds_state.is_connected)
+    {
+        return ERROR_OK;
+    }
+
+    lwcan_untimeout(s3_timer_handler, NULL);
+
+    uds_state.is_connected = 0;
+
+    uds_state.p2 = UDS_P2_DEFAULT;
+
+    uds_state.p2_star = UDS_P2_STAR_DEFAULT;
+
+    return ERROR_OK;
+}
+
+/**
+ * @brief Set UDS session context
  * (can be changed during an active session if there is no communication at the moment)
  *
  * @param context session context
  * @param handle context handle
- * @return error code
+ * @return 0 if success or error code
  */
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
 {
@@ -266,75 +419,48 @@ lwcanerr_t uds_set_context(const struct uds_context *context, void *handle)
 }
 
 /**
- * @brief start UDS session
+ * @brief Set time for P2 timer
  *
- * @param addr server address
- * @param session_type required session
- * @return error code
+ * @param time time in milliseconds
+ * @return lwcanerr_t
  */
-lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type)
+lwcanerr_t uds_set_p2_timer(uint32_t time)
 {
-    uint8_t data[2];
-
-    lwcanerr_t ret;
-
-    if (addr == NULL)
-    {
-        return ERROR_ARG;
-    }
-
     if (uds_state.state != UDS_IDLE)
     {
         return ERROR_INPROGRESS;
     }
 
-    ret = isotp_bind(uds_state.isotp_pcb, addr);
+    uds_state.p2 = time;
 
-    if (ret != ERROR_OK)
+    return ERROR_OK;
+}
+
+/**
+ * @brief Set time for P2* timer
+ *
+ * @param time time in milliseconds
+ * @return 0 if success or error code
+ */
+lwcanerr_t uds_set_p2_star_timer(uint32_t time)
+{
+    if (uds_state.state != UDS_IDLE)
     {
-        return ret;
+        return ERROR_INPROGRESS;
     }
 
-    data[0] = UDS_DIAGNOSTIC_SESSION_CONTROL_SID;
-    data[1] = session_type;
+    uds_state.p2_star = time;
 
-    return uds_send_request(data, sizeof(data), 1);
+    return ERROR_OK;
 }
 
 /**
- * @brief close active session (immediately)
- *
- */
-void uds_close_diagnostic_session(void)
-{
-    uds_state.state = UDS_IDLE;
-
-    lwcan_untimeout(s3_client_timer_handler, NULL);
-
-    uds_state.session = 0;
-
-    uds_state.p2 = UDS_P2_DEFAULT;
-
-    uds_state.p2_star = UDS_P2_STAR_DEFAULT;
-}
-
-/**
- * @brief get active UDS session
- *
- * @return uds session
- */
-uint8_t uds_get_active_session(void)
-{
-    return uds_state.session;
-}
-
-/**
- * @brief send uds request
+ * @brief Send uds request
  *
  * @param request pre-formed request according to the used UDS implementation (e.g. {0x31, 0x01, 0x00, 0x04, 0x11})
  * @param size request size
  * @param with_response 0 if there is no response to the request, or >0 if there is a response to the request
- * @return error code
+ * @return 0 if success or error code
  */
 lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response)
 {
@@ -345,14 +471,14 @@ lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_res
         return ERROR_ARG;
     }
 
+    if (!uds_state.is_connected)
+    {
+        return ERROR_CONNECT;
+    }
+
     if (uds_state.state != UDS_IDLE)
     {
         return ERROR_INPROGRESS;
-    }
-
-    if (uds_state.session != 0)
-    {
-        lwcan_untimeout(s3_client_timer_handler, NULL);
     }
 
     ret = isotp_send(uds_state.isotp_pcb, request, size);
@@ -369,10 +495,9 @@ lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_res
         lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
     }
 
-    if (uds_state.session != 0)
-    {
-        lwcan_timeout(UDS_S3_CLIENT, s3_client_timer_handler, NULL);
-    }
+    lwcan_untimeout(s3_timer_handler, NULL);
+
+    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
 
     return ERROR_OK;
 }

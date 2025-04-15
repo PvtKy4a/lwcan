@@ -14,15 +14,17 @@ extern "C"
 
 lwcanerr_t uds_client_init(void);
 
-void uds_client_cleanup(void);
+lwcanerr_t uds_client_deinit(void);
+
+lwcanerr_t uds_client_connect(const struct addr_can *addr);
+
+lwcanerr_t uds_client_disconnect(void);
 
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle);
 
-lwcanerr_t uds_start_diagnostic_session(const struct addr_can *addr, uint8_t session_type);
+lwcanerr_t uds_set_p2_timer(uint32_t time);
 
-void uds_close_diagnostic_session(void);
-
-uint8_t uds_get_active_session(void);
+lwcanerr_t uds_set_p2_star_timer(uint32_t time);
 
 lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response);
 

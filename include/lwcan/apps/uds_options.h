@@ -23,17 +23,31 @@ extern "C"
 #endif
 
 /*
- *  Default timeout for P2 timer
+ *  Default timeout for P2 timer in milliseconds
  */
 #if !defined UDS_P2_DEFAULT
 #define UDS_P2_DEFAULT              50
 #endif
 
 /*
- *  Default timeout for P2* timer
+ *  Default timeout for P2* timer in milliseconds
  */
 #if !defined UDS_P2_STAR_DEFAULT
-#define UDS_P2_STAR_DEFAULT         500
+#define UDS_P2_STAR_DEFAULT         5000
+#endif
+
+/*
+ *  Number of attempts to connect the client to the server
+ */
+#if !defined UDS_CONNECT_RETRY_NUM
+#define UDS_CONNECT_RETRY_NUM       20
+#endif
+
+/*
+ *  Timeout between connection attempts in milliseconds
+ */
+#if !defined UDS_CONNECT_RETRY_TIMEOUT
+#define UDS_CONNECT_RETRY_TIMEOUT   50
 #endif
 
 /*
@@ -41,21 +55,14 @@ extern "C"
  *  Uses service 0x31 Tester present
  */
 #if !defined UDS_KEEP_SESSION
-#define UDS_KEEP_SESSION            0
+#define UDS_KEEP_SESSION            1
 #endif
 
 /*
- *  Sub-function for UDS_KEEP_SESSION
+ *  Subfunction for tester present to suppress response
  */
-#if !defined UDS_KEEP_SESSION_SUB && UDS_KEEP_SESSION
-#define UDS_KEEP_SESSION_SUB        0x80
-#endif
-
-/*
- *  Specify whether UDS_KEEP_SESSION_SUB suppresses the response to the request (1) or not (0)
- */
-#if !defined UDS_SUPPRESS_KEEP_SESSION_RESPONSE && UDS_KEEP_SESSION
-#define UDS_SUPPRESS_KEEP_SESSION_RESPONSE 1
+#if !defined UDS_KEEP_SESSION_SUPPRESS && UDS_KEEP_SESSION
+#define UDS_KEEP_SESSION_SUPPRESS   0x80
 #endif
 
 #ifdef __cplusplus

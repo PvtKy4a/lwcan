@@ -29,7 +29,9 @@ typedef enum
 /** Operation in progress. */
     ERROR_INPROGRESS = -8,
 /** Operation aborted. */
-    ERROR_ABORTED = -9
+    ERROR_ABORTED = -9,
+/** Not connected. */
+    ERROR_CONNECT = -10
 } lwcan_error_enum_t;
 
 typedef int8_t lwcanerr_t;

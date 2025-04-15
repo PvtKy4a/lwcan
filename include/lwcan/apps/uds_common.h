@@ -43,13 +43,13 @@ extern "C"
 
 struct uds_context
 {
-    void (*request)(void *handle, uint8_t sid, uint8_t *data, uint32_t size); /* not implemented */
+    void (*request)(void *handle, uint8_t sid, uint8_t *data, uint32_t size); /* For server (not implemented) */
 
-    void (*positive_response)(void *handle, uint8_t *data, uint32_t size);
+    void (*positive_response)(void *handle, uint8_t *data, uint32_t size); /* For client */
 
-    void (*negative_response)(void *handle, uint8_t rejected_sid, uint8_t nrc);
+    void (*negative_response)(void *handle, uint8_t rejected_sid, uint8_t nrc); /* For client */
 
-    void (*error)(void *handle, lwcanerr_t error);
+    void (*error)(void *handle, lwcanerr_t error); /* Common */
 };
 
 #ifdef __cplusplus
