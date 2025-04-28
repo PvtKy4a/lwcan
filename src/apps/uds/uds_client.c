@@ -29,7 +29,7 @@ typedef enum
 
 struct uds_state
 {
-    uint8_t state;
+    volatile uint8_t state;
 
     uint8_t is_connected;
 
