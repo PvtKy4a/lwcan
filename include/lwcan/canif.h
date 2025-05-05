@@ -15,7 +15,7 @@ struct canif;
 
 typedef lwcanerr_t (*canif_input_function)(struct canif *canif, void *frame);
 
-typedef lwcanerr_t (*canif_output_function)(struct canif *canif, void *frame);
+typedef lwcanerr_t (*canif_output_function)(struct canif *canif, void *frame, uint8_t frame_size);
 
 typedef lwcanerr_t (*canif_init_function)(struct canif *canif);
 

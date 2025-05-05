@@ -144,10 +144,10 @@ void isotp_out_flow_output(void *arg)
     struct can_frame frame;
 #endif
 
-    LWCAN_ASSERT("arg != NULL", arg != NULL);
-
     if (arg == NULL)
     {
+        LWCAN_ASSERT("arg != NULL", arg != NULL);
+
         return;
     }
 
@@ -192,11 +192,9 @@ void isotp_out_flow_output(void *arg)
             return;
     }
 
-    ret = canif->output(canif, &frame);
+    ret = canif->output(canif, &frame, sizeof(frame));
 
     lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
-    LWCAN_ASSERT("canif->output", ret == 0);
 
     if (ret == ERROR_OK)
     {
@@ -204,6 +202,8 @@ void isotp_out_flow_output(void *arg)
 
         return;
     }
+
+    LWCAN_ASSERT("ret == 0", ret == 0);
 
     isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
 
@@ -219,12 +219,12 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 {
     struct lwcan_buffer *buffer;
 
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-    LWCAN_ASSERT("data != NULL", data != NULL);
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (pcb == NULL || data == NULL || length == 0)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+        LWCAN_ASSERT("data != NULL", data != NULL);
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return ERROR_ARG;
     }
 

@@ -237,15 +237,23 @@ exit_none:
     return RAW_INPUT_NONE;
 }
 
-lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size)
+lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size)
 {
     struct canif *canif;
 
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-    LWCAN_ASSERT("frame != NULL", frame != NULL);
-
-    if (pcb == NULL || frame == NULL || size < sizeof(struct can_frame))
+    if (pcb == NULL || frame == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+        LWCAN_ASSERT("frame != NULL", frame != NULL);
+
+        return ERROR_ARG;
+    }
+
+    if (frame_size != sizeof(struct can_frame) && frame_size != sizeof(struct canfd_frame))
+    {
+        LWCAN_ASSERT("frame_size == sizeof(struct can_frame)", frame_size == sizeof(struct can_frame));
+        LWCAN_ASSERT("frame_size == sizeof(struct canfd_frame)", frame_size == sizeof(struct canfd_frame));
+
         return ERROR_ARG;
     }
 
@@ -256,7 +264,7 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size)
         return ERROR_CANIF;
     }
 
-    return canif->output(canif, frame);
+    return canif->output(canif, frame, frame_size);
 }
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive)

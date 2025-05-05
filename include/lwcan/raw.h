@@ -43,7 +43,7 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr);
 
 lwcanerr_t canraw_remove(struct canraw_pcb *pcb);
 
-lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t size);
+lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size);
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive);
 
