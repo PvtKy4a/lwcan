@@ -252,19 +252,9 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
 #if ISOTP_CANFD
     if (pcb->output_flow.remaining_data > (CANFD_MAX_DLEN - FD_SF_DATA_OFFSET))
-    {
-        pcb->output_flow.state = ISOTP_TX_FF;
-
-        pcb->output_flow.cf_sn = 1;
-
-        pcb->output_flow.n_wft = ISOTP_MAX_N_WFT;
-    }
-    else
-    {
-        pcb->output_flow.state = ISOTP_TX_SF;
-    }
 #else
     if (pcb->output_flow.remaining_data > (CAN_MAX_DLEN - SF_DATA_OFFSET))
+#endif
     {
         pcb->output_flow.state = ISOTP_TX_FF;
 
@@ -276,7 +266,6 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
     {
         pcb->output_flow.state = ISOTP_TX_SF;
     }
-#endif
 
     lwcan_timeout(ISOTP_N_AS, isotp_output_timeout_error_handler, pcb);
 
