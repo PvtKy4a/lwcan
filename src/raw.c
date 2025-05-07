@@ -240,14 +240,6 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size)
         return ERROR_ARG;
     }
 
-    if (frame_size != sizeof(struct can_frame) && frame_size != sizeof(struct canfd_frame))
-    {
-        LWCAN_ASSERT("frame_size == sizeof(struct can_frame)", frame_size == sizeof(struct can_frame));
-        LWCAN_ASSERT("frame_size == sizeof(struct canfd_frame)", frame_size == sizeof(struct canfd_frame));
-
-        return ERROR_ARG;
-    }
-
     canif = canif_get_by_index(pcb->if_index);
 
     if (canif == NULL)
