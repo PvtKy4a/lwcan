@@ -18,14 +18,14 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
     struct canif *canif_temp;
 
     uint8_t num_canifs;
-    
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("name != NULL", name != NULL);
-    LWCAN_ASSERT("init != NULL", init != NULL);
-    LWCAN_ASSERT("input != NULL", input != NULL);
 
     if (canif == NULL || name == NULL || init == NULL || input == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        LWCAN_ASSERT("name != NULL", name != NULL);
+        LWCAN_ASSERT("init != NULL", init != NULL);
+        LWCAN_ASSERT("input != NULL", input != NULL);
+
         return ERROR_ARG;
     }
 
@@ -94,10 +94,10 @@ lwcanerr_t canif_remove(struct canif *canif)
 {
     struct canif *canif_temp;
 
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-
     if (canif == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+
         return ERROR_ARG;
     }
 
@@ -127,11 +127,11 @@ lwcanerr_t canif_input(struct canif *canif, void *frame)
     canraw_input_state_t raw_status;
 #endif
 
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("frame != NULL", frame != NULL);
-
     if (canif == NULL || frame == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        LWCAN_ASSERT("frame != NULL", frame != NULL);
+
         return ERROR_ARG;
     }
 
@@ -151,11 +151,11 @@ lwcanerr_t canif_input(struct canif *canif, void *frame)
 
 lwcanerr_t canif_set_bitrate(struct canif *canif, uint32_t bitrate)
 {
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("bitrate != 0", bitrate != 0);
-
     if (canif == NULL || bitrate == 0)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        LWCAN_ASSERT("bitrate != 0", bitrate != 0);
+
         return ERROR_ARG;
     }
 
@@ -169,11 +169,11 @@ lwcanerr_t canif_set_bitrate(struct canif *canif, uint32_t bitrate)
 
 lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter)
 {
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("filter != NULL", filter != NULL);
-
     if (canif == NULL || filter == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        LWCAN_ASSERT("filter != NULL", filter != NULL);
+
         return ERROR_ARG;
     }
 
@@ -187,11 +187,11 @@ lwcanerr_t canif_set_filter(struct canif *canif, struct can_filter *filter)
 
 lwcanerr_t canif_get_name(struct canif *canif, char *name)
 {
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("name != NULL", name != NULL);
-
     if (canif == NULL || name == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        LWCAN_ASSERT("name != NULL", name != NULL);
+
         return ERROR_ARG;
     }
 
@@ -204,10 +204,10 @@ struct canif *canif_get_by_name(const char *name)
 {
     struct canif *canif;
 
-    LWCAN_ASSERT("name != NULL", name != NULL);
-
     if (name == NULL)
     {
+        LWCAN_ASSERT("name != NULL", name != NULL);
+
         return NULL;
     }
 
@@ -240,10 +240,10 @@ lwcanerr_t canif_index_to_name(uint8_t index, char *name)
 
 uint8_t canif_get_index(struct canif *canif)
 {
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-
     if (canif == NULL)
     {
+        LWCAN_ASSERT("canif != NULL", canif != NULL);
+
         return 0;
     }
 
@@ -254,10 +254,10 @@ struct canif *canif_get_by_index(uint8_t index)
 {
     struct canif *canif;
 
-    LWCAN_ASSERT("index != 0", index != 0);
-
     if (index == 0)
     {
+        LWCAN_ASSERT("index != 0", index != 0);
+
         return NULL;
     }
 

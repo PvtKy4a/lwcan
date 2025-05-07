@@ -113,11 +113,11 @@ struct canraw_pcb *canraw_new(void)
 
 lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-    LWCAN_ASSERT("addr != NULL", addr != NULL);
-
     if (pcb == NULL || addr == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+        LWCAN_ASSERT("addr != NULL", addr != NULL);
+
         return ERROR_ARG;
     }
 
@@ -139,10 +139,10 @@ lwcanerr_t canraw_remove(struct canraw_pcb *pcb)
 
     lwcanerr_t ret;
 
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         ret = ERROR_ARG;
 
         goto exit;
@@ -186,33 +186,31 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 {
     struct canraw_pcb *pcb;
 
-    struct canraw_pcb *prev = NULL;
+    struct canraw_pcb *prev;
 
     uint8_t if_index;
 
-    LWCAN_ASSERT("canif != NULL", canif != NULL);
-    LWCAN_ASSERT("frame != NULL", frame != NULL);
-
-    if (canif == NULL || frame == NULL)
-    {
-        goto exit_none;
-    }
-
     if_index = canif_get_index(canif);
-
-    if (if_index == 0)
-    {
-        LWCAN_ASSERT("if_index != 0", if_index != 0);
-
-        goto exit_none;
-    }
 
     pcb = canraw_pcb_list;
 
+    prev = NULL;
+
     while (pcb != NULL)
     {
-        if (pcb->if_index == if_index && pcb->receive != NULL && pcb->receive(pcb->callback_arg, pcb, frame) != 0)
+        if (pcb->if_index != if_index)
         {
+            prev = pcb;
+
+            pcb = pcb->next;
+        }
+        else
+        {
+            if (pcb->receive == NULL || pcb->receive(pcb->callback_arg, pcb, frame) == 0)
+            {
+                break;
+            }
+
             if (prev != NULL)
             {
                 /* move the pcb to the front of canraw_pcb_list so that is found faster next time */
@@ -225,15 +223,8 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 
             return RAW_INPUT_EATEN;
         }
-        else
-        {
-            prev = pcb;
-
-            pcb = pcb->next;
-        }
     }
 
-exit_none:
     return RAW_INPUT_NONE;
 }
 
@@ -269,10 +260,10 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size)
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -283,10 +274,10 @@ lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_fu
 
 lwcanerr_t canraw_set_callback_arg(struct canraw_pcb *pcb, void *arg)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 

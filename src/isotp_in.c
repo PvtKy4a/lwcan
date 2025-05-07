@@ -386,6 +386,8 @@ static void received_fc(struct isotp_pcb *pcb, void *frame)
 
 void isotp_input(struct canif *canif, void *frame)
 {
+    uint8_t if_index;
+
     struct isotp_pcb *pcb;
 
 #if ISOTP_CANFD
@@ -394,24 +396,7 @@ void isotp_input(struct canif *canif, void *frame)
     struct can_frame *_frame = (struct can_frame *)frame;
 #endif
 
-    uint8_t if_index;
-
-    if (canif == NULL || frame == NULL)
-    {
-        LWCAN_ASSERT("canif != NULL", canif != NULL);
-        LWCAN_ASSERT("frame != NULL", frame != NULL);
-
-        return;
-    }
-
     if_index = canif_get_index(canif);
-
-    if (if_index == 0)
-    {
-        LWCAN_ASSERT("if_index == 0", if_index == 0);
-
-        return;
-    }
 
     pcb = isotp_get_pcb_list();
 
