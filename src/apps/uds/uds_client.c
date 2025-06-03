@@ -6,7 +6,7 @@
 #include "lwcan/timeouts.h"
 #include "lwcan/memory.h"
 
-#include "string.h"
+#include <string.h>
 
 #define UDS_SID_OFFSET 0
 
@@ -29,7 +29,7 @@ typedef enum
 
 struct uds_state
 {
-    volatile uint8_t state;
+    uint8_t state;
 
     uint8_t is_connected;
 
@@ -44,7 +44,7 @@ struct uds_state
     struct isotp_pcb *isotp_pcb;
 };
 
-static struct uds_state uds_state;
+static volatile struct uds_state uds_state;
 
 static void s3_timer_handler(void *arg)
 {
@@ -245,7 +245,7 @@ lwcanerr_t uds_client_init(void)
 
     isotp_set_error_callback(isotp_pcb, uds_error);
 
-    memset(&uds_state, 0, sizeof(struct uds_state));
+    memset((void *)&uds_state, 0, sizeof(struct uds_state));
 
     uds_state.isotp_pcb = isotp_pcb;
 
@@ -275,7 +275,7 @@ lwcanerr_t uds_client_deinit(void)
         lwcan_untimeout(s3_timer_handler, NULL);
     }
 
-    memset(&uds_state, 0, sizeof(uds_state));
+    memset((void *)&uds_state, 0, sizeof(uds_state));
 
     return ERROR_OK;
 }

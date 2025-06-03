@@ -32,7 +32,7 @@ struct lwcan_timeout
     void *arg;
 };
 
-static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM];
+static volatile uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM];
 
 static struct lwcan_timeout *next_timeout;
 
@@ -86,7 +86,7 @@ static bool time_less_than(uint32_t time, uint32_t compare_to)
 
 void lwcan_timeouts_init(void)
 {
-    memset(timeout_mem_pool, 0, sizeof(timeout_mem_pool));
+    memset((void *)timeout_mem_pool, 0, sizeof(timeout_mem_pool));
 
     next_timeout = NULL;
 }

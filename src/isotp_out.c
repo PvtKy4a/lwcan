@@ -230,6 +230,8 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
     if (pcb->output_flow.state != ISOTP_IDLE)
     {
+        LWCAN_ASSERT("pcb->output_flow.state == ISOTP_IDLE", pcb->output_flow.state == ISOTP_IDLE);
+
         return ERROR_INPROGRESS;
     }
 

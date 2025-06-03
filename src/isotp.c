@@ -21,7 +21,7 @@
 
 #define ISOTP_MEM_POOL_SERVICE_END_IDX ((ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM) - 1)
 
-static uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
+static volatile uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
 
 static struct isotp_pcb *isotp_pcb_list;
 
@@ -85,7 +85,7 @@ static void isotp_pcb_free(void *mem)
 
 void isotp_init(void)
 {
-    memset(isotp_mem_pool, 0, sizeof(isotp_mem_pool));
+    memset((void *)isotp_mem_pool, 0, sizeof(isotp_mem_pool));
 
     isotp_pcb_list = NULL;
 
