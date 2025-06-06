@@ -20,6 +20,8 @@ typedef enum
 
     UDS_CONNECTING,
 
+    UDS_SENDING_REQUEST,
+
     UDS_WAIT_RESPONSE,
 
     UDS_WAIT_SEGMENTED_RESPONSE,
@@ -32,6 +34,8 @@ struct uds_state
     uint8_t state;
 
     uint8_t is_connected;
+
+    uint8_t with_response;
 
     uint16_t p2;
 
@@ -56,9 +60,7 @@ static void s3_timer_handler(void *arg)
     request[0] = UDS_TESTER_PRESENT_SID;
     request[1] = UDS_KEEP_SESSION_SUPPRESS;
 
-    isotp_send(uds_state.isotp_pcb, request, sizeof(request));
-
-    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
+    uds_send_request(request, 2, 0);
 #else
     uds_state.is_connected = 0;
 
@@ -223,6 +225,29 @@ static void uds_error(void *arg, lwcanerr_t error)
     uds_state.state = UDS_IDLE;
 }
 
+static void uds_sent(void *arg, struct isotp_pcb *pcb, uint32_t length)
+{
+    (void)arg;
+    (void)pcb;
+    (void)length;
+
+    if (uds_state.state != UDS_SENDING_REQUEST)
+    {
+        return;
+    }
+
+    if (uds_state.with_response)
+    {
+        uds_state.state = UDS_WAIT_RESPONSE;
+
+        lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
+    }
+
+    lwcan_untimeout(s3_timer_handler, NULL);
+
+    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
+}
+
 /**
  * @brief Initialize UDS client
  *
@@ -242,6 +267,8 @@ lwcanerr_t uds_client_init(void)
     isotp_set_receive_callback(isotp_pcb, uds_receive);
 
     isotp_set_receive_ff_callback(isotp_pcb, uds_receive_ff);
+
+    isotp_set_sent_callback(isotp_pcb, uds_sent);
 
     isotp_set_error_callback(isotp_pcb, uds_error);
 
@@ -333,10 +360,6 @@ static lwcanerr_t try_connect(void)
     ret = ERROR_ABORTED;
 
 exit:
-    while (uds_state.state != UDS_IDLE)
-    {
-    }
-
     return ret;
 }
 
@@ -464,8 +487,6 @@ lwcanerr_t uds_set_p2_star_timer(uint32_t time)
  */
 lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response)
 {
-    lwcanerr_t ret;
-
     if (request == NULL || size == 0)
     {
         return ERROR_ARG;
@@ -481,25 +502,11 @@ lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_res
         return ERROR_INPROGRESS;
     }
 
-    ret = isotp_send(uds_state.isotp_pcb, request, size);
+    uds_state.with_response = with_response;
 
-    if (ret != ERROR_OK)
-    {
-        return ret;
-    }
+    uds_state.state = UDS_SENDING_REQUEST;
 
-    if (with_response)
-    {
-        uds_state.state = UDS_WAIT_RESPONSE;
-
-        lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
-    }
-
-    lwcan_untimeout(s3_timer_handler, NULL);
-
-    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
-
-    return ERROR_OK;
+    return isotp_send(uds_state.isotp_pcb, request, size);
 }
 
 #endif
