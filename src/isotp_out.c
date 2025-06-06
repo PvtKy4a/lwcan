@@ -33,8 +33,6 @@ static void sent_ff(struct isotp_pcb *pcb)
         return;
     }
 
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
-
     pcb->output_flow.state = ISOTP_WAIT_FC;
 
     lwcan_timeout(ISOTP_N_BS, isotp_output_timeout_error_handler, pcb);
@@ -271,7 +269,7 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
     lwcan_timeout(ISOTP_N_AS, isotp_output_timeout_error_handler, pcb);
 
-    isotp_out_flow_output(pcb);
+    lwcan_timeout(0, isotp_out_flow_output, pcb);
 
     return ERROR_OK;
 }

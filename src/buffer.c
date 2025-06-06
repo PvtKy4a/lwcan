@@ -10,10 +10,10 @@ struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 {
     struct lwcan_buffer *buffer;
 
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (length == 0)
     {
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return NULL;
     }
 
@@ -51,12 +51,12 @@ void lwcan_buffer_delete(struct lwcan_buffer *buffer)
 
 lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length)
 {
-    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-    LWCAN_ASSERT("source != NULL", source != NULL);
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (buffer == NULL || source == NULL || length == 0)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+        LWCAN_ASSERT("source != NULL", source != NULL);
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return ERROR_ARG;
     }
 
@@ -67,12 +67,12 @@ lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *sour
 
 lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length, uint32_t offset)
 {
-    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-    LWCAN_ASSERT("source != NULL", source != NULL);
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (buffer == NULL || source == NULL || length == 0)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+        LWCAN_ASSERT("source != NULL", source != NULL);
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return ERROR_ARG;
     }
 
@@ -83,12 +83,12 @@ lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_
 
 lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length)
 {
-    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-    LWCAN_ASSERT("distination != NULL", distination != NULL);
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (buffer == NULL || distination == NULL || length == 0)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+        LWCAN_ASSERT("distination != NULL", distination != NULL);
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return ERROR_ARG;
     }
 
@@ -99,12 +99,12 @@ lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distinat
 
 lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length, uint32_t offset)
 {
-    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-    LWCAN_ASSERT("distination != NULL", distination != NULL);
-    LWCAN_ASSERT("length != 0", length != 0);
-
     if (buffer == NULL || distination == NULL || length == 0)
     {
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+        LWCAN_ASSERT("distination != NULL", distination != NULL);
+        LWCAN_ASSERT("length != 0", length != 0);
+
         return ERROR_ARG;
     }
 

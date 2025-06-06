@@ -110,7 +110,6 @@ void isotp_in_flow_output(void *arg)
             break;
 
         default:
-            LWCAN_ASSERT("Unallowed case", 0);
             return;
     }
 
@@ -118,14 +117,14 @@ void isotp_in_flow_output(void *arg)
 
     lwcan_untimeout(isotp_input_timeout_error_handler, pcb);
 
-    LWCAN_ASSERT("canif->output", ret == 0);
-
     if (ret == ERROR_OK)
     {
         isotp_sent(pcb, frame_type);
 
         return;
     }
+
+    LWCAN_ASSERT("ret == 0", ret == 0);
 
     isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
 
@@ -249,7 +248,7 @@ output:
 
     lwcan_timeout(ISOTP_N_BR, isotp_input_timeout_error_handler, pcb);
 
-    isotp_in_flow_output(pcb);
+    lwcan_timeout(0, isotp_in_flow_output, pcb);
 }
 
 static void received_cf(struct isotp_pcb *pcb, void *frame)
@@ -325,7 +324,7 @@ output:
 
     lwcan_timeout(ISOTP_N_BR, isotp_input_timeout_error_handler, pcb);
 
-    isotp_in_flow_output(pcb);
+    lwcan_timeout(0, isotp_in_flow_output, pcb);
 }
 
 static void received_fc(struct isotp_pcb *pcb, void *frame)
@@ -381,7 +380,7 @@ static void received_fc(struct isotp_pcb *pcb, void *frame)
 
     lwcan_timeout(ISOTP_N_CS, isotp_output_timeout_error_handler, pcb);
 
-    isotp_out_flow_output(pcb);
+    lwcan_timeout(0, isotp_out_flow_output, pcb);
 }
 
 void isotp_input(struct canif *canif, void *frame)

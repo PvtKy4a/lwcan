@@ -21,7 +21,7 @@
 
 #define ISOTP_MEM_POOL_SERVICE_END_IDX ((ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM) - 1)
 
-static volatile uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
+static uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
 
 static struct isotp_pcb *isotp_pcb_list;
 
@@ -85,7 +85,7 @@ static void isotp_pcb_free(void *mem)
 
 void isotp_init(void)
 {
-    memset((void *)isotp_mem_pool, 0, sizeof(isotp_mem_pool));
+    memset(isotp_mem_pool, 0, sizeof(isotp_mem_pool));
 
     isotp_pcb_list = NULL;
 
@@ -127,11 +127,11 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
 {
     canid_t tx_id, rx_id;
 
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-    LWCAN_ASSERT("addr != NULL", addr != NULL);
-
     if (pcb == NULL || addr == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+        LWCAN_ASSERT("addr != NULL", addr != NULL);
+
         return ERROR_ARG;
     }
 
@@ -164,11 +164,11 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
         rx_id &= CAN_SFF_MASK;
     }
 
-    LWCAN_ASSERT("tx_id == addr->can_addr.tp.tx_id", tx_id == addr->can_addr.tp.tx_id);
-    LWCAN_ASSERT("rx_id == addr->can_addr.tp.rx_id", rx_id == addr->can_addr.tp.rx_id);
-
     if (tx_id != addr->can_addr.tp.tx_id || rx_id != addr->can_addr.tp.rx_id)
     {
+        LWCAN_ASSERT("tx_id == addr->can_addr.tp.tx_id", tx_id == addr->can_addr.tp.tx_id);
+        LWCAN_ASSERT("rx_id == addr->can_addr.tp.rx_id", rx_id == addr->can_addr.tp.rx_id);
+
         return ERROR_ARG;
     }
 
@@ -187,10 +187,10 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
 
     lwcanerr_t ret;
 
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         ret = ERROR_ARG;
 
         goto exit;
@@ -232,10 +232,10 @@ exit:
 
 lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -246,10 +246,10 @@ lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_funct
 
 lwcanerr_t isotp_set_receive_ff_callback(struct isotp_pcb *pcb, isotp_receive_ff_function receive_ff)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -260,10 +260,10 @@ lwcanerr_t isotp_set_receive_ff_callback(struct isotp_pcb *pcb, isotp_receive_ff
 
 lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function sent)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -274,10 +274,10 @@ lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function se
 
 lwcanerr_t isotp_set_error_callback(struct isotp_pcb *pcb, isotp_error_function error)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -288,10 +288,10 @@ lwcanerr_t isotp_set_error_callback(struct isotp_pcb *pcb, isotp_error_function 
 
 lwcanerr_t isotp_set_callback_arg(struct isotp_pcb *pcb, void *arg)
 {
-    LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
     if (pcb == NULL)
     {
+        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
+
         return ERROR_ARG;
     }
 
@@ -361,7 +361,7 @@ static uint8_t get_padding_length(uint32_t length)
 }
 #endif
 
-static void add_padding(uint8_t *data, uint8_t num)
+static inline void add_padding(uint8_t *data, uint8_t num)
 {
     memset(data, ISOTP_PADDING_BYTE, num);
 }
@@ -413,8 +413,6 @@ void isotp_fill_ff(struct isotp_flow *flow, void *frame)
     _frame->data[FRAME_TYPE_OFFSET] = FF;
 
     _frame->data[FD_FF_FLAG_OFFSET] = FD_FF_FLAG;
-
-    *(uint32_t *)(_frame->data + FD_FF_DL_OFFSET) = flow->remaining_data;
 
     _frame->data[FD_FF_DL_OFFSET] = (uint8_t)(flow->remaining_data >> 24) & (uint8_t)0xFF;
 
@@ -504,11 +502,11 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
 {
     struct lwcan_buffer *buffer_temp;
 
-    LWCAN_ASSERT("flow != NULL", flow != NULL);
-    LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
     if (flow == NULL || buffer == NULL)
     {
+        LWCAN_ASSERT("flow != NULL", flow != NULL);
+        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+
         return;
     }
 
@@ -538,10 +536,10 @@ void isotp_output_timeout_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
 
-    LWCAN_ASSERT("arg != NULL", arg != NULL);
-
     if (arg == NULL)
     {
+        LWCAN_ASSERT("arg != NULL", arg != NULL);
+
         return;
     }
 
@@ -561,10 +559,10 @@ void isotp_input_timeout_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
 
-    LWCAN_ASSERT("arg != NULL", arg != NULL);
-
     if (arg == NULL)
     {
+        LWCAN_ASSERT("arg != NULL", arg != NULL);
+
         return;
     }
 

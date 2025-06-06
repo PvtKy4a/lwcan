@@ -21,7 +21,7 @@
 
 #define CANRAW_MEM_POOL_SERVICE_END_IDX ((CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM) - 1)
 
-static volatile uint8_t canraw_mem_pool[CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM];
+static uint8_t canraw_mem_pool[CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM];
 
 static struct canraw_pcb *canraw_pcb_list;
 
@@ -72,7 +72,7 @@ static void canraw_pcb_free(void *mem)
 
 void canraw_init(void)
 {
-    memset((void *)canraw_mem_pool, 0, sizeof(canraw_mem_pool));
+    memset(canraw_mem_pool, 0, sizeof(canraw_mem_pool));
 
     canraw_pcb_list = NULL;
 
