@@ -33,7 +33,7 @@ extern "C"
  *  Default timeout for P2* timer in milliseconds
  */
 #if !defined UDS_P2_STAR_DEFAULT
-#define UDS_P2_STAR_DEFAULT         5000
+#define UDS_P2_STAR_DEFAULT         500
 #endif
 
 /*

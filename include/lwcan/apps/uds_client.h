@@ -12,11 +12,13 @@ extern "C"
 
 #include <stdint.h>
 
+typedef void (*connect_cb_function)(void *arg, lwcanerr_t error);
+
 lwcanerr_t uds_client_init(void);
 
 lwcanerr_t uds_client_deinit(void);
 
-lwcanerr_t uds_client_connect(const struct addr_can *addr);
+lwcanerr_t uds_client_connect(const struct addr_can *addr, connect_cb_function cb, void *arg);
 
 lwcanerr_t uds_client_disconnect(void);
 
