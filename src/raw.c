@@ -133,19 +133,13 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
     return ERROR_OK;
 }
 
-lwcanerr_t canraw_remove(struct canraw_pcb *pcb)
+void canraw_remove(struct canraw_pcb *pcb)
 {
     struct canraw_pcb *pcb_temp;
 
-    lwcanerr_t ret;
-
     if (pcb == NULL)
     {
-        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
-        ret = ERROR_ARG;
-
-        goto exit;
+        return;
     }
 
     if (canraw_pcb_list == pcb)
@@ -160,26 +154,19 @@ lwcanerr_t canraw_remove(struct canraw_pcb *pcb)
             {
                 pcb_temp->next = pcb->next;
 
-                ret = ERROR_OK;
-
                 break;
             }
         }
 
         if (pcb_temp == NULL)
         {
-            ret = ERROR_OK;
-
-            goto exit;
+            return;
         }
     }
 
     canraw_pcb_free(pcb);
 
     canraw_pcb_num -= 1;
-
-exit:
-    return ret;
 }
 
 canraw_input_state_t canraw_input(struct canif *canif, void *frame)

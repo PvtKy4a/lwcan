@@ -74,7 +74,7 @@ struct isotp_pcb *isotp_new(void);
 
 lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr);
 
-lwcanerr_t isotp_remove(struct isotp_pcb *pcb);
+void isotp_remove(struct isotp_pcb *pcb);
 
 lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t length);
 

@@ -181,19 +181,13 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
     return ERROR_OK;
 }
 
-lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
+void isotp_remove(struct isotp_pcb *pcb)
 {
     struct isotp_pcb *pcb_temp;
 
-    lwcanerr_t ret;
-
     if (pcb == NULL)
     {
-        LWCAN_ASSERT("pcb != NULL", pcb != NULL);
-
-        ret = ERROR_ARG;
-
-        goto exit;
+        return;
     }
 
     if (isotp_pcb_list == pcb)
@@ -208,26 +202,19 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
             {
                 pcb_temp->next = pcb->next;
 
-                ret = ERROR_OK;
-
                 break;
             }
         }
 
         if (pcb_temp == NULL)
         {
-            ret = ERROR_OK;
-
-            goto exit;
+            return;
         }
     }
 
     isotp_pcb_free(pcb);
 
     isotp_pcb_num -= 1;
-
-exit:
-    return ret;
 }
 
 lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive)
