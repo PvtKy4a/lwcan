@@ -215,26 +215,66 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
     return RAW_INPUT_NONE;
 }
 
-lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size)
+static void raw_sent(void *arg, lwcanerr_t error)
+{
+    struct canraw_pcb *pcb;
+
+    pcb = (struct canraw_pcb *)arg;
+
+    pcb->sent = 0;
+
+    pcb->sent_error = error;
+}
+
+lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, uint32_t timeout, canif_sent_function sent, void *arg)
 {
     struct canif *canif;
+
+    lwcanerr_t ret;
 
     if (pcb == NULL || frame == NULL)
     {
         LWCAN_ASSERT("pcb != NULL", pcb != NULL);
         LWCAN_ASSERT("frame != NULL", frame != NULL);
 
-        return ERROR_ARG;
+        ret = ERROR_ARG;
+
+        goto exit;
     }
 
     canif = canif_get_by_index(pcb->if_index);
 
     if (canif == NULL)
     {
-        return ERROR_CANIF;
+        ret = ERROR_CANIF;
+
+        goto exit;
     }
 
-    return canif->output(canif, frame, frame_size);
+    if (sent != NULL)
+    {
+        ret = canif->output(canif, frame, frame_size, timeout, sent, arg);
+
+        goto exit;
+    }
+
+    ret = canif->output(canif, frame, frame_size, timeout, raw_sent, pcb);
+
+    if (ret != ERROR_OK)
+    {
+        goto exit;
+    }
+
+    while (!pcb->sent)
+    {
+    }
+
+    pcb->sent = 0;
+
+    ret = pcb->sent_error;
+
+exit:
+    return ret;
 }
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive)

@@ -116,6 +116,10 @@ struct isotp_pcb *isotp_new(void)
 
     pcb->next = isotp_pcb_list;
 
+    pcb->output_flow.pcb = pcb;
+
+    pcb->input_flow.pcb = pcb;
+
     isotp_pcb_list = pcb;
 
     isotp_pcb_num += 1;
@@ -519,7 +523,7 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
     }
 }
 
-void isotp_output_timeout_error_handler(void *arg)
+void isotp_output_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
 
@@ -542,7 +546,7 @@ void isotp_output_timeout_error_handler(void *arg)
     }
 }
 
-void isotp_input_timeout_error_handler(void *arg)
+void isotp_input_error_handler(void *arg)
 {
     struct isotp_pcb *pcb;
 

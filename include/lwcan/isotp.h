@@ -30,6 +30,8 @@ struct isotp_flow
 {
     uint8_t state;
 
+    struct isotp_pcb *pcb;
+
     struct lwcan_buffer *buffer;
 
     uint32_t remaining_data;

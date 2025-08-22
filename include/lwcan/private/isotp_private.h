@@ -95,7 +95,7 @@ void isotp_out_flow_output(void *arg);
 
 void isotp_in_flow_output(void *arg);
 
-void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type);
+void isotp_sent(void *arg, lwcanerr_t error);
 
 struct isotp_pcb *isotp_get_pcb_list(void);
 
@@ -113,9 +113,9 @@ void isotp_fill_fc(struct isotp_flow *flow, void *frame);
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer);
 
-void isotp_output_timeout_error_handler(void *arg);
+void isotp_output_error_handler(void *arg);
 
-void isotp_input_timeout_error_handler(void *arg);
+void isotp_input_error_handler(void *arg);
 
 #endif
 

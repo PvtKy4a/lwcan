@@ -35,7 +35,7 @@ static void sent_ff(struct isotp_pcb *pcb)
 
     pcb->output_flow.state = ISOTP_WAIT_FC;
 
-    lwcan_timeout(ISOTP_N_BS, isotp_output_timeout_error_handler, pcb);
+    lwcan_timeout(ISOTP_N_BS, isotp_output_error_handler, pcb);
 }
 
 static void sent_cf(struct isotp_pcb *pcb)
@@ -73,15 +73,13 @@ static void sent_cf(struct isotp_pcb *pcb)
     {
         pcb->output_flow.state = ISOTP_TX_CF;
 
-        lwcan_timeout(ISOTP_N_CS + pcb->output_flow.st, isotp_output_timeout_error_handler, pcb);
-
         lwcan_timeout(pcb->output_flow.st, isotp_out_flow_output, pcb);
     }
     else
     {
         pcb->output_flow.state = ISOTP_WAIT_FC;
 
-        lwcan_timeout(ISOTP_N_BS, isotp_output_timeout_error_handler, pcb);
+        lwcan_timeout(ISOTP_N_BS, isotp_output_error_handler, pcb);
     }
 }
 
@@ -101,27 +99,45 @@ static void sent_fc(struct isotp_pcb *pcb)
 
     pcb->input_flow.state = ISOTP_WAIT_CF;
 
-    lwcan_timeout(ISOTP_N_CR, isotp_input_timeout_error_handler, pcb);
+    lwcan_timeout(ISOTP_N_CR, isotp_input_error_handler, pcb);
 }
 
-void isotp_sent(struct isotp_pcb *pcb, uint8_t frame_type)
+void isotp_sent(void *arg, lwcanerr_t error)
 {
-    switch (frame_type)
+    struct isotp_flow *flow;
+
+    flow = (struct isotp_flow *)arg;
+
+    if (error != ERROR_OK)
     {
-    case SF:
-        sent_sf(pcb);
+        LWCAN_ASSERT("error == ERROR_OK", error == ERROR_OK);
+
+        isotp_remove_buffer(flow, flow->buffer);
+
+        flow->state = ISOTP_IDLE;
+
+        if (flow->pcb->error != NULL)
+        {
+            flow->pcb->error(flow->pcb->callback_arg, error);
+        }
+    }
+
+    switch (flow->state)
+    {
+    case ISOTP_TX_SF:
+        sent_sf(flow->pcb);
         break;
 
-    case FF:
-        sent_ff(pcb);
+    case ISOTP_TX_FF:
+        sent_ff(flow->pcb);
         break;
 
-    case CF:
-        sent_cf(pcb);
+    case ISOTP_TX_CF:
+        sent_cf(flow->pcb);
         break;
 
-    case FC:
-        sent_fc(pcb);
+    case ISOTP_TX_FC:
+        sent_fc(flow->pcb);
         break;
     }
 }
@@ -134,7 +150,7 @@ void isotp_out_flow_output(void *arg)
 
     lwcanerr_t ret;
 
-    uint8_t frame_type;
+    uint32_t timeout;
 
 #if ISOTP_CANFD
     struct canfd_frame frame;
@@ -173,35 +189,31 @@ void isotp_out_flow_output(void *arg)
     {
         case ISOTP_TX_SF:
             isotp_fill_sf(&pcb->output_flow, &frame);
-            frame_type = SF;
+            timeout = ISOTP_N_AS;
             break;
 
         case ISOTP_TX_FF:
             isotp_fill_ff(&pcb->output_flow, &frame);
-            frame_type = FF;
+            timeout = ISOTP_N_AS;
             break;
 
         case ISOTP_TX_CF:
             isotp_fill_cf(&pcb->output_flow, &frame);
-            frame_type = CF;
+            timeout = ISOTP_N_CS;
             break;
 
         default:
             return;
     }
 
-    ret = canif->output(canif, &frame, sizeof(frame));
-
-    lwcan_untimeout(isotp_output_timeout_error_handler, pcb);
+    ret = canif->output(canif, &frame, sizeof(frame), timeout, isotp_sent, &pcb->output_flow);
 
     if (ret == ERROR_OK)
     {
-        isotp_sent(pcb, frame_type);
-
         return;
     }
 
-    LWCAN_ASSERT("ret == 0", ret == 0);
+    LWCAN_ASSERT("ret == ERROR_OK", ret == ERROR_OK);
 
     isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
 
@@ -266,8 +278,6 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
     {
         pcb->output_flow.state = ISOTP_TX_SF;
     }
-
-    lwcan_timeout(ISOTP_N_AS, isotp_output_timeout_error_handler, pcb);
 
     lwcan_timeout(0, isotp_out_flow_output, pcb);
 

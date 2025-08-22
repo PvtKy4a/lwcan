@@ -12,6 +12,7 @@ extern "C"
 
 #include "lwcan/error.h"
 #include "lwcan/can.h"
+#include "lwcan/canif.h"
 
 #include <stdint.h>
 
@@ -35,6 +36,10 @@ struct canraw_pcb
     canraw_receive_function receive;
 
     void *callback_arg;
+
+    volatile uint8_t sent;
+
+    volatile lwcanerr_t sent_error;
 };
 
 struct canraw_pcb *canraw_new(void);
@@ -43,7 +48,7 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr);
 
 void canraw_remove(struct canraw_pcb *pcb);
 
-lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size);
+lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, uint32_t timeout, canif_sent_function sent, void *arg);
 
 lwcanerr_t canraw_set_receive_callback(struct canraw_pcb *pcb, canraw_receive_function receive);
 
