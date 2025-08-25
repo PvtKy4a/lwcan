@@ -13,11 +13,9 @@ extern "C"
  *
  * @param arg Additional argument to pass to the function - set up by lwcan_timeout()
  */
-typedef void (* lwcan_timeout_handler)(void *arg);
+typedef void (*lwcan_timeout_handler)(void *arg);
 
-void lwcan_timeouts_init(void);
-
-void lwcan_check_timeouts(void);
+void lwcan_timeouts_handler(void);
 
 void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg);
 

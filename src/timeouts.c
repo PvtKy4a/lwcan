@@ -1,4 +1,5 @@
 #include "lwcan/timeouts.h"
+#include "lwcan/private/timeouts_private.h"
 #include "lwcan/error.h"
 #include "lwcan/system.h"
 #include "lwcan/options.h"
@@ -88,7 +89,7 @@ void lwcan_timeouts_init(void)
     next_timeout = NULL;
 }
 
-void lwcan_check_timeouts(void)
+void lwcan_timeouts_handler(void)
 {
     uint32_t now;
 
