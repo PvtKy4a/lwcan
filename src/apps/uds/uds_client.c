@@ -457,19 +457,19 @@ lwcanerr_t uds_client_connect(const struct addr_can *addr, connect_cb_function c
 /**
  * @brief Disconnect from server
  *
- * @return 0 if success or error code
  */
-lwcanerr_t uds_client_disconnect(void)
+void uds_client_disconnect(void)
 {
-    if (uds_state.state != UDS_IDLE)
-    {
-        return ERROR_INPROGRESS;
-    }
-
     if (!uds_state.is_connected)
     {
-        return ERROR_OK;
+        return;
     }
+
+    uds_state.state = UDS_IDLE;
+
+    lwcan_untimeout(p2_timer_handler, NULL);
+
+    lwcan_untimeout(p2_star_timer_handler, NULL);
 
     lwcan_untimeout(s3_timer_handler, NULL);
 
@@ -478,8 +478,6 @@ lwcanerr_t uds_client_disconnect(void)
     uds_state.p2 = UDS_P2_DEFAULT;
 
     uds_state.p2_star = UDS_P2_STAR_DEFAULT;
-
-    return ERROR_OK;
 }
 
 /**

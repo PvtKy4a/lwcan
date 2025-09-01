@@ -110,8 +110,6 @@ void isotp_sent(void *arg, lwcanerr_t error)
 
     if (error != ERROR_OK)
     {
-        LWCAN_ASSERT("error == ERROR_OK", error == ERROR_OK);
-
         isotp_remove_buffer(flow, flow->buffer);
 
         flow->state = ISOTP_IDLE;
@@ -213,8 +211,6 @@ void isotp_out_flow_output(void *arg)
         return;
     }
 
-    LWCAN_ASSERT("ret == ERROR_OK", ret == ERROR_OK);
-
     isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
 
     pcb->output_flow.state = ISOTP_IDLE;
@@ -240,8 +236,6 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
     if (pcb->output_flow.state != ISOTP_IDLE)
     {
-        LWCAN_ASSERT("pcb->output_flow.state == ISOTP_IDLE", pcb->output_flow.state == ISOTP_IDLE);
-
         return ERROR_INPROGRESS;
     }
 

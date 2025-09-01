@@ -120,8 +120,6 @@ void isotp_in_flow_output(void *arg)
         return;
     }
 
-    LWCAN_ASSERT("ret == ERROR_OK", ret == ERROR_OK);
-
     isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
 
     pcb->input_flow.state = ISOTP_IDLE;

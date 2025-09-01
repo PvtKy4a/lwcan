@@ -20,7 +20,7 @@ lwcanerr_t uds_client_deinit(void);
 
 lwcanerr_t uds_client_connect(const struct addr_can *addr, connect_cb_function cb, void *arg);
 
-lwcanerr_t uds_client_disconnect(void);
+void uds_client_disconnect(void);
 
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle);
 
