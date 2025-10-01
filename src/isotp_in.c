@@ -437,7 +437,7 @@ lwcanerr_t isotp_received(struct isotp_pcb *pcb, struct lwcan_buffer *buffer)
         return ERROR_ARG;
     }
 
-    isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
+    isotp_remove_buffer(&pcb->input_flow, buffer);
 
     return ERROR_OK;
 }
