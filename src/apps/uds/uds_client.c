@@ -347,6 +347,10 @@ static void uds_sent(void *arg, struct isotp_pcb *pcb, uint32_t length)
 
         lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
     }
+    else
+    {
+        uds_state.state = UDS_IDLE;
+    }
 
     lwcan_untimeout(s3_timer_handler, NULL);
 
