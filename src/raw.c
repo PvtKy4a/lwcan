@@ -221,7 +221,7 @@ static void raw_sent(void *arg, lwcanerr_t error)
 
     pcb = (struct canraw_pcb *)arg;
 
-    pcb->sent = 0;
+    pcb->sent = 1;
 
     pcb->sent_error = error;
 }
