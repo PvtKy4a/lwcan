@@ -153,8 +153,6 @@ static void received_sf(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
         if (pcb->error != NULL)
         {
             pcb->error(pcb->callback_arg, ERROR_MEMORY);
@@ -204,8 +202,6 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
         pcb->input_flow.fs = FS_OVERFLOW;
 
         if (pcb->error != NULL)

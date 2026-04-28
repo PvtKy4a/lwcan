@@ -243,8 +243,6 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
         return ERROR_MEMORY;
     }
 

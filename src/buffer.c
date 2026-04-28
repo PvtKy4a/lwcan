@@ -12,8 +12,6 @@ struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 
     if (length == 0)
     {
-        LWCAN_ASSERT("length != 0", length != 0);
-
         return NULL;
     }
 
@@ -21,8 +19,6 @@ struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
         return NULL;
     }
 
@@ -30,8 +26,6 @@ struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 
     if (buffer->payload == NULL)
     {
-        LWCAN_ASSERT("buffer->payload != NULL", buffer->payload != NULL);
-
         lwcan_free(buffer);
 
         return NULL;
