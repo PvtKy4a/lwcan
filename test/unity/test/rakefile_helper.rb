@@ -1,7 +1,7 @@
 # =========================================================================
 #   Unity - A Test Framework for C
 #   ThrowTheSwitch.org
-#   Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+#   Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
 #   SPDX-License-Identifier: MIT
 # =========================================================================
 
@@ -13,21 +13,11 @@ require_relative '../auto/yaml_helper'
 
 module RakefileHelpers
   C_EXTENSION = '.c'.freeze
-
   def load_configuration(config_file)
     return if $configured
 
-    $cfg_file_base = config_file
-    cfg_file = if config_file =~ /[\\|\/]/
-      $unity_test_config_file_in_targets = false
-      config_file
-    else
-      $unity_test_config_file_in_targets = true
-      "targets/#{config_file}"
-    end
-    $cfg = YamlHelper.load_file(cfg_file)
-    $cfg[:paths] ||= {}
-    $cfg[:paths][:test] = (Array($cfg[:paths][:test]) + ['src/', '../src/', 'testdata/', 'tests/']).uniq
+    $cfg_file = "targets/#{config_file}" unless config_file =~ /[\\|\/]/
+    $cfg = YamlHelper.load_file($cfg_file)
     $colour_output = false unless $cfg['colour']
     $configured = true if config_file != DEFAULT_CONFIG_FILE
   end
@@ -106,14 +96,7 @@ module RakefileHelpers
     args = []
     hash[:arguments].each do |arg|
       if arg.include? '$'
-        if arg.include? '${5}'
-          all_paths = [ File.join('..','src'), $extra_paths, 'src', File.join('tests'), File.join('testdata'), $cfg[:paths][:support] ].flatten.uniq.compact
-          all_paths.each { |f| args << arg.gsub('${5}', f) }
-
-        elsif arg.include? '${6}'
-          [ $cfg[:defines][:test], $cfg.dig(:unity, :defines), defines ].flatten.uniq.compact.each { |f| args << arg.gsub('${6}', f) }
-
-        elsif arg.include? ': COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE'
+        if arg.include? ': COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE'
           pattern = arg.gsub(': COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE','')
           [ File.join('..','src') ].each do |f|
             args << pattern.gsub(/\$/,f)
@@ -127,7 +110,7 @@ module RakefileHelpers
 
         elsif arg.include? ': COLLECTION_DEFINES_TEST_AND_VENDOR'
           pattern = arg.gsub(': COLLECTION_DEFINES_TEST_AND_VENDOR','')
-          [ $cfg[:defines][:test], $cfg.dig(:unity, :defines), defines ].flatten.uniq.compact.each do |f|
+          [ $cfg[:defines][:test], defines ].flatten.uniq.compact.each do |f|
             args << pattern.gsub(/\$/,f)
           end
 
@@ -153,7 +136,7 @@ module RakefileHelpers
   end
 
   def compile(file, defines = [])
-    out_file = File.join('build', File.basename(file, C_EXTENSION)) + ($cfg[:extension][:object] || '.o')
+    out_file = File.join('build', File.basename(file, C_EXTENSION)) + $cfg[:extension][:object]
     cmd_str = build_command_string( $cfg[:tools][:test_compiler], [ file, out_file ], defines )
     execute(cmd_str)
     out_file
@@ -182,7 +165,7 @@ module RakefileHelpers
               "--style=allman --indent=spaces=4 --indent-switches --indent-preproc-define --indent-preproc-block " \
               "--pad-oper --pad-comma --unpad-paren --pad-header " \
               "--align-pointer=type --align-reference=name " \
-              "--mode=c --suffix=none " \
+              "--add-brackets --mode=c --suffix=none " \
               "#{style_what}"
     execute(command, false)
     report "Styling C:PASS"
@@ -204,32 +187,6 @@ module RakefileHelpers
     results = Dir[results_glob]
     summary.targets = results
     report summary.run
-  end
-
-  # Parse all Unity summary lines from combined output (e.g. multiple executables)
-  # and produce a single synthesized result string suitable for save_test_results.
-  def collect_test_output(output)
-    total_tests    = 0
-    total_failures = 0
-    total_ignored  = 0
-    detail_lines   = []
-
-    output.each_line do |line|
-      stripped = line.chomp
-      if stripped =~ /(\d+) Tests (\d+) Failures (\d+) Ignored/
-        total_tests    += Regexp.last_match(1).to_i
-        total_failures += Regexp.last_match(2).to_i
-        total_ignored  += Regexp.last_match(3).to_i
-      elsif stripped =~ /^[^:]+:[^:]+:\w+(?:\([^)]*\))?:(?:PASS|FAIL|IGNORE)/
-        detail_lines << stripped
-      end
-    end
-
-    synthesized  = detail_lines.join("\n")
-    synthesized += "\n" unless detail_lines.empty?
-    synthesized += "#{total_tests} Tests #{total_failures} Failures #{total_ignored} Ignored\n"
-    synthesized += total_failures > 0 ? "FAILED\n" : "OK\n"
-    synthesized
   end
 
   def save_test_results(test_base, output)
@@ -258,7 +215,7 @@ module RakefileHelpers
     obj_list = src_files.map { |f| compile(f, ['UNITY_SKIP_DEFAULT_RUNNER', 'UNITY_FIXTURE_NO_EXTRAS']) }
 
     # Link the test executable
-    test_base = File.basename('fixtures_test', C_EXTENSION)
+    test_base = File.basename('framework_test', C_EXTENSION)
     link_it(test_base, obj_list)
 
     # Run and collect output
@@ -325,7 +282,7 @@ module RakefileHelpers
       runner_name = test_base + '_Runner.c'
       runner_path = File.join('build',runner_name)
 
-      options = $cfg[:unity] || {}
+      options = $cfg[:unity]
       options[:use_param_tests] = test =~ /parameterized/ ? true : false
       UnityTestRunnerGenerator.new(options).run(test, runner_path)
       obj_list << compile(runner_path, test_defines)
@@ -336,120 +293,24 @@ module RakefileHelpers
       # Link the test executable
       link_it(test_base, obj_list)
 
-      # Execute unit test
+      # Execute unit test and generate results file
       output = runtest(test_base)
-      
-      # This is a list of all non-string valid outputs
-      # (in order) this is the following options:
-      #     valid binary representations
-      #     valid hexadecimal representation
-      #     valid integer (signed or unsigned) or float values of any precision
-      #     valid floating point special-case verbage
-      #     valid boolean verbage
-      #     valid pointer verbage
-      #     string representations
-      #     character representations
-      valid_vals_regexes = [
-        /[01X]+/,
-        /0x[0-9A-Fa-f]+/,
-        /-?\d+(?:\.\d+)?/,
-        /(?:Not )?(?:Negative )?(?:Infinity|NaN|Determinate|Invalid Float Trait)/,
-        /TRUE|FALSE/,
-        /NULL/,
-        /"[^"]*"/,
-        /'[^']*'/
-      ]
-      valid_vals = "(?:#{valid_vals_regexes.map(&:source).join('|')})"
-
-      # Verify outputs seem to have happened
-      failures = 0
-      output = output.each_line.map do |line|
-        if (line =~ /(?:Delta.*)?(?:Element.*)?Expected.*Was/)
-          if !(line =~ /(?:Delta \d+ )?(?:Element \d+ )?Expected #{valid_vals} Was #{valid_vals}/)
-            failures += 1
-            "[FAIL] " + line.sub(/:PASS$/,":FAIL:Output Format Failure")
-          else
-            "[p   ] " + line
-          end
-        elsif (line =~ /:PASS$/)
-          "[p   ] " + line
-        elsif (line =~ /:FAIL(?:[^:])$/) || (line =~ /^FAILED$/)
-          #failure has already been counted therefore do not add
-          "[FAIL] " + line
-        elsif (line =~ /:IGNORE$/)
-          #ignore has already been counted therefore do not add
-          "[i---] " + line
-        else
-          "[    ] " + line
-        end
-      end.join
-
-      # Update the final test summary
-      if failures > 0
-        output.sub!(/^(?:\[    \] )?(\d+) Tests (\d+) Failures (\d+) Ignored/) do
-          tests = $1
-          failures = $2.to_i + failures
-          ignored = $3
-          "[    ] #{tests} Tests #{failures} Failures #{ignored} Ignored"
-        end
-        output.sub!(/\[    \] OK$/,"[FAIL] FAILED")
-        report output
-        raise "Command failed. (#{failures.to_s} Output Formatting Issues)"
-      end
-
-      # Generate results file
       save_test_results(test_base, output)
     end
   end
 
   def run_make_tests()
-    report "\nRunning Unity Examples with Make"
-    combined_output = ''
-    [ "make -s",                 # test with all defaults
-      "make -s coverage",        # test with coverage
+    [ "make -s",                               # test with all defaults
+      #"make -s DEBUG=-m32",                    # test 32-bit architecture with 64-bit support
+      #"make -s DEBUG=-m32 UNITY_SUPPORT_64=",  # test 32-bit build without 64-bit types
+      "make -s UNITY_INCLUDE_DOUBLE= ",        # test without double
       "cd #{File.join("..","extras","fixture",'test')} && make -s default noStdlibMalloc",
       "cd #{File.join("..","extras","fixture",'test')} && make -s C89",
       "cd #{File.join("..","extras","memory",'test')} && make -s default noStdlibMalloc",
       "cd #{File.join("..","extras","memory",'test')} && make -s C89",
     ].each do |cmd|
       report "Testing '#{cmd}'"
-      combined_output += "Testing '#{cmd}'\n\n#{execute(cmd, false)}\n"
+      execute(cmd, false)
     end
-    save_test_results('make_tests', collect_test_output(combined_output))
-  end
-
-  def run_examples()
-    total_tests = total_ignored = 0
-    
-    # If we're set up to use gcc, the makefiles should work too. otherwise, just run example 3
-    examples = if $cfg_file_base.nil? || ($cfg_file_base =~ /gcc/)
-      {
-        :example_1 => "cd ../examples/example_1 && make -s ci",
-        :example_2 => "cd ../examples/example_2 && make -s ci"
-      }
-    else
-      {}
-    end
-
-    if $unity_test_config_file_in_targets
-      examples[:example_3] = "cd ../examples/example_3 && rake config[#{$cfg_file_base}] default"
-    else
-      examples[:example_3] = "cd ../examples/example_3 && rake config[\"../#{$unity_test_config_file}\"] default"
-    end
-
-    examples.each_pair do |key, cmd|
-      report "\nRunning Unity Example: #{key.to_s}"
-      execute(cmd, false).each_line do |line|
-        if line =~ /(\d+) Tests \d+ Failures (\d+) Ignored/
-          total_tests   += Regexp.last_match(1).to_i
-          total_ignored += Regexp.last_match(2).to_i
-          # Failures intentionally not counted: the examples contain tests designed
-          # to fail to demonstrate Unity's detection capability. A zero exit code
-          # from make/rake means those failures were verified as expected; if
-          # something truly broke, execute() would have raised above.
-        end
-      end
-    end
-    save_test_results('examples', "#{total_tests} Tests 0 Failures #{total_ignored} Ignored\nOK\n")
   end
 end

@@ -1,15 +1,21 @@
 # =========================================================================
 #   Unity - A Test Framework for C
 #   ThrowTheSwitch.org
-#   Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+#   Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
 #   SPDX-License-Identifier: MIT
 # =========================================================================
 
 ---
+tools_root: C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+colour: true
+:unity:
+  :plugins: []
 :tools:
   :test_compiler:
     :name: compiler
-    :executable: C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\bin\iccsh.exe
+    :executable:
+    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+    - sh\bin\iccsh.exe
     :arguments:
     - "-e"
     - "--char_is_signed"
@@ -23,7 +29,8 @@
     - "--no_clustering"
     - "--debug"
     - "--dlib_config"
-    - "C:\\Program Files\\IAR Systems\\Embedded Workbench 6.0\\sh\\inc\\DLib_Product.h"
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\inc\DLib_Product.h
     - "--double=32"
     - "--code_model=huge"
     - "--data_model=huge"
@@ -33,19 +40,23 @@
     - "--mfc"
     - "--use_unix_directory_separators"
     - "--diag_suppress=Pe161"
-    - '-I"${5}"'
-    - "-D${6}"
+    - '-I"$": COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE'
+    - '-I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR'
+    - "-D$: COLLECTION_DEFINES_TEST_AND_VENDOR"
     - "${1}"
     - "-o ${2}"
   :test_linker:
     :name: linker
-    :executable: C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\bin\ilinksh.exe
+    :executable:
+    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+    - sh\bin\ilinksh.exe
     :arguments:
     - "${1}"
     - "--redirect __Printf=__PrintfSmall"
     - "--redirect __Scanf=__ScanfSmall"
     - "--config"
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\config\generic.icf
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\config\generic.icf
     - "--config_def _CSTACK_SIZE=0x800"
     - "--config_def _HEAP_SIZE=0x800"
     - "--config_def _INT_TABLE=0x10"
@@ -54,19 +65,25 @@
     - "-o ${2}"
   :test_fixture:
     :name: simulator
-    :executable: C:\Program Files\IAR Systems\Embedded Workbench 6.0\common\bin\CSpyBat.exe
+    :executable:
+    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+    - common\bin\CSpyBat.exe
     :arguments:
     - "--silent"
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\bin\shproc.dll
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\bin\shsim.dll
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\bin\shproc.dll
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\bin\shsim.dll
     - "${1}"
     - "--plugin"
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\bin\shbat.dll
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\bin\shbat.dll
     - "--backend"
     - "-B"
     - "--core sh2afpu"
     - "-p"
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\config\debugger\io7264.ddf
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\config\debugger\io7264.ddf
     - "-d"
     - sim
 :extension:
@@ -74,8 +91,10 @@
   :executable: ".out"
 :paths:
   :test:
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\inc\
-    - C:\Program Files\IAR Systems\Embedded Workbench 6.0\sh\inc\c
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\inc\
+    - - C:\Program Files\IAR Systems\Embedded Workbench 6.0\
+      - sh\inc\c
     - src\
     - "..\\src\\"
     - testdata/

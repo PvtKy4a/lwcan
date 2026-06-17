@@ -1,7 +1,7 @@
 /* =========================================================================
     Unity - A Test Framework for C
     ThrowTheSwitch.org
-    Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+    Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
     SPDX-License-Identifier: MIT
 ========================================================================= */
 
@@ -19,11 +19,8 @@ TEST_GROUP_RUNNER(UnityCommandOptions)
 {
     RUN_TEST_CASE(UnityCommandOptions, DefaultOptions);
     RUN_TEST_CASE(UnityCommandOptions, OptionVerbose);
-    RUN_TEST_CASE(UnityCommandOptions, OptionDryRun);
     RUN_TEST_CASE(UnityCommandOptions, OptionSelectTestByGroup);
     RUN_TEST_CASE(UnityCommandOptions, OptionSelectTestByName);
-    RUN_TEST_CASE(UnityCommandOptions, OptionSelectTestByGroupExact);
-    RUN_TEST_CASE(UnityCommandOptions, OptionSelectTestByNameExact);
     RUN_TEST_CASE(UnityCommandOptions, OptionSelectRepeatTestsDefaultCount);
     RUN_TEST_CASE(UnityCommandOptions, OptionSelectRepeatTestsSpecificCount);
     RUN_TEST_CASE(UnityCommandOptions, MultipleOptions);

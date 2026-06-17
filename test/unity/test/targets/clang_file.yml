@@ -1,11 +1,14 @@
 # =========================================================================
 #   Unity - A Test Framework for C
 #   ThrowTheSwitch.org
-#   Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+#   Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
 #   SPDX-License-Identifier: MIT
 # =========================================================================
 
 ---
+colour: true
+:unity:
+  :plugins: []
 :tools:
   :test_compiler:
     :name: compiler
@@ -47,8 +50,9 @@
     - "-std=gnu99"
     - "-pedantic"
     - "-O0"
-    - '-I"${5}"'
-    - "-D${6}"
+    - '-I"$": COLLECTION_PATHS_TEST_TOOLCHAIN_INCLUDE'
+    - '-I"$": COLLECTION_PATHS_TEST_SUPPORT_SOURCE_INCLUDE_VENDOR'
+    - "-D$: COLLECTION_DEFINES_TEST_AND_VENDOR"
     - "${1}"
     - "-o ${2}"
   :test_linker:
@@ -62,9 +66,14 @@
 :extension:
   :object: ".o"
   :executable: ".exe"
+:paths:
+  :test:
+    - src/
+    - "../src/"
+    - testdata/
+    - tests/
 :defines:
   :test:
   - UNITY_INCLUDE_DOUBLE
   - UNITY_SUPPORT_64
   - UNITY_OUTPUT_RESULTS_FILE
-  - UNITY_POINTER_WIDTH=64

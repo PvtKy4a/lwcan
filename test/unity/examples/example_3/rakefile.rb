@@ -1,7 +1,7 @@
 # =========================================================================
 #   Unity - A Test Framework for C
 #   ThrowTheSwitch.org
-#   Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+#   Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
 #   SPDX-License-Identifier: MIT
 # =========================================================================
 
@@ -20,7 +20,8 @@ end
 
 task prepare_for_tests: TEMP_DIRS
 
-DEFAULT_CONFIG_FILE = 'gcc_64.yml'.freeze
+# Load default configuration, for now
+DEFAULT_CONFIG_FILE = 'target_gcc_32.yml'.freeze
 configure_toolchain(DEFAULT_CONFIG_FILE)
 
 task unit: [:prepare_for_tests] do

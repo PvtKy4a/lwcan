@@ -1,7 +1,7 @@
 /* =========================================================================
     Unity - A Test Framework for C
     ThrowTheSwitch.org
-    Copyright (c) 2007-26 Mike Karlesky, Mark VanderVoord, & Greg Williams
+    Copyright (c) 2007-25 Mike Karlesky, Mark VanderVoord, & Greg Williams
     SPDX-License-Identifier: MIT
 ========================================================================= */
 
@@ -44,39 +44,44 @@ void testUnitySizeInitializationReminder(void)
                      "still correct.";
 
     /* Define a structure with all the same fields as `struct UNITY_STORAGE_T`. */
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpadded"
-#endif
-struct {
-    const char* TestFile;
-    const char* CurrentTestName;
-#ifndef UNITY_EXCLUDE_DETAILS
-#ifdef UNITY_DETAIL_STACK_SIZE
-    UNITY_DETAIL_LABEL_TYPE CurrentDetailStackLabels[UNITY_DETAIL_STACK_SIZE];
-    UNITY_DETAIL_VALUE_TYPE CurrentDetailStackValues[UNITY_DETAIL_STACK_SIZE];
-    UNITY_COUNTER_TYPE CurrentDetailStackSize;
-#else
-    const char* CurrentDetail1;
-    const char* CurrentDetail2;
-#endif
-#endif
-    UNITY_LINE_TYPE CurrentTestLineNumber;
-    UNITY_COUNTER_TYPE NumberOfTests;
-    UNITY_COUNTER_TYPE TestFailures;
-    UNITY_COUNTER_TYPE TestIgnores;
-    UNITY_COUNTER_TYPE CurrentTestFailed;
-    UNITY_COUNTER_TYPE CurrentTestIgnored;
+#ifdef UNITY_EXCLUDE_DETAILS
+    struct {
+        const char* TestFile;
+        const char* CurrentTestName;
+        UNITY_LINE_TYPE CurrentTestLineNumber;
+        UNITY_COUNTER_TYPE NumberOfTests;
+        UNITY_COUNTER_TYPE TestFailures;
+        UNITY_COUNTER_TYPE TestIgnores;
+        UNITY_COUNTER_TYPE CurrentTestFailed;
+        UNITY_COUNTER_TYPE CurrentTestIgnored;
 #ifdef UNITY_INCLUDE_EXEC_TIME
-    UNITY_TIME_TYPE CurrentTestStartTime;
-    UNITY_TIME_TYPE CurrentTestStopTime;
+        UNITY_TIME_TYPE CurrentTestStartTime;
+        UNITY_TIME_TYPE CurrentTestStopTime;
 #endif
 #ifndef UNITY_EXCLUDE_SETJMP_H
-    jmp_buf AbortFrame;
+        jmp_buf AbortFrame;
 #endif
-} Expected_Unity;
-#if defined(__GNUC__) || defined(__clang__)
-#pragma GCC diagnostic pop
+    } _Expected_Unity;
+#else
+    struct {
+        const char* TestFile;
+        const char* CurrentTestName;
+        const char* CurrentDetails1;
+        const char* CurrentDetails2;
+        UNITY_LINE_TYPE CurrentTestLineNumber;
+        UNITY_COUNTER_TYPE NumberOfTests;
+        UNITY_COUNTER_TYPE TestFailures;
+        UNITY_COUNTER_TYPE TestIgnores;
+        UNITY_COUNTER_TYPE CurrentTestFailed;
+        UNITY_COUNTER_TYPE CurrentTestIgnored;
+#ifdef UNITY_INCLUDE_EXEC_TIME
+        UNITY_COUNTER_TYPE CurrentTestStartTime;
+        UNITY_COUNTER_TYPE CurrentTestStopTime;
+#endif
+#ifndef UNITY_EXCLUDE_SETJMP_H
+        jmp_buf AbortFrame;
+#endif
+    } _Expected_Unity;
 #endif
 
     /* Compare our fake structure's size to the actual structure's size. They
@@ -84,22 +89,22 @@ struct {
      *
      * This accounts for alignment, padding, and packing issues that might come
      * up between different architectures. */
-    TEST_ASSERT_EQUAL_MESSAGE(sizeof(Expected_Unity), sizeof(Unity), message);
+    TEST_ASSERT_EQUAL_MESSAGE(sizeof(_Expected_Unity), sizeof(Unity), message);
 }
 
-UNITY_FUNCTION_ATTR(noreturn) void testPassShouldEndImmediatelyWithPass(void)
+void testPassShouldEndImmediatelyWithPass(void)
 {
     TEST_PASS();
     TEST_FAIL_MESSAGE("We should have passed already and finished this test");
 }
 
-UNITY_FUNCTION_ATTR(noreturn) void testPassShouldEndImmediatelyWithPassAndMessage(void)
+void testPassShouldEndImmediatelyWithPassAndMessage(void)
 {
     TEST_PASS_MESSAGE("Woohoo! This Automatically Passes!");
     TEST_FAIL_MESSAGE("We should have passed already and finished this test");
 }
 
-UNITY_FUNCTION_ATTR(noreturn) void testMessageShouldDisplayMessageWithoutEndingAndGoOnToPass(void)
+void testMessageShouldDisplayMessageWithoutEndingAndGoOnToPass(void)
 {
     TEST_MESSAGE("This is just a message");
     TEST_MESSAGE("This is another message");
@@ -277,7 +282,7 @@ void testProtection(void)
     TEST_ASSERT_EQUAL(3, mask);
 }
 
-UNITY_FUNCTION_ATTR(noreturn) void testIgnoredAndThenFailInTearDown(void)
+void testIgnoredAndThenFailInTearDown(void)
 {
     SetToOneToFailInTearDown = 1;
     TEST_IGNORE();
