@@ -51,8 +51,11 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
     {
         LWCAN_ASSERT("canif != NULL", canif != NULL);
         LWCAN_ASSERT("name != NULL", name != NULL);
-        LWCAN_ASSERT("strlen(name) != 0", strlen(name) != 0);
-        LWCAN_ASSERT("strlen(name) <= sizeof(canif->name)", strlen(name) <= sizeof(canif->name));
+        if (name != NULL)
+        {
+            LWCAN_ASSERT("strlen(name) != 0", strlen(name) != 0);
+            LWCAN_ASSERT("strlen(name) <= sizeof(canif->name)", strlen(name) <= sizeof(canif->name));
+        }
         LWCAN_ASSERT("init != NULL", init != NULL);
 
         return ERROR_ARG;
