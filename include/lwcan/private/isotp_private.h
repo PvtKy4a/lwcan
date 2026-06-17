@@ -91,9 +91,7 @@ void isotp_init(void);
 
 void isotp_input(struct canif *canif, void *frame);
 
-void isotp_out_flow_output(void *arg);
-
-void isotp_in_flow_output(void *arg);
+void isotp_output(void *arg);
 
 void isotp_sent(void *arg, lwcanerr_t error);
 
@@ -113,9 +111,7 @@ void isotp_fill_fc(struct isotp_flow *flow, void *frame);
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer);
 
-void isotp_output_error_handler(void *arg);
-
-void isotp_input_error_handler(void *arg);
+void isotp_timeout_error_handler(void *arg);
 
 #endif
 

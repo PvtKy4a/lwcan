@@ -323,11 +323,11 @@ uint32_t isotp_get_ff_dl(uint8_t *frame_data)
     {
         length = frame_data[FD_FF_DL_OFFSET] << 24;
 
-        length = frame_data[FD_FF_DL_OFFSET + 1] << 16;
+        length |= frame_data[FD_FF_DL_OFFSET + 1] << 16;
 
-        length = frame_data[FD_FF_DL_OFFSET + 2] << 8;
+        length |= frame_data[FD_FF_DL_OFFSET + 2] << 8;
 
-        length = frame_data[FD_FF_DL_OFFSET + 3];
+        length |= frame_data[FD_FF_DL_OFFSET + 3];
     }
     else
 #endif
@@ -523,9 +523,13 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
     }
 }
 
-void isotp_output_error_handler(void *arg)
+void isotp_timeout_error_handler(void *arg)
 {
+    struct isotp_flow *flow;
+
     struct isotp_pcb *pcb;
+
+    lwcanerr_t error;
 
     if (arg == NULL)
     {
@@ -534,38 +538,26 @@ void isotp_output_error_handler(void *arg)
         return;
     }
 
-    pcb = (struct isotp_pcb *)arg;
+    flow = (struct isotp_flow *)arg;
 
-    isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
+    pcb = flow->pcb;
 
-    pcb->output_flow.state = ISOTP_IDLE;
+    isotp_remove_buffer(flow, flow->buffer);
+
+    flow->state = ISOTP_IDLE;
+
+    if (flow == &pcb->output_flow)
+    {
+        error = ERROR_TRANSMIT_TIMEOUT;
+    }
+    else
+    {
+        error = ERROR_RECEIVE_TIMEOUT;
+    }
 
     if (pcb->error != NULL)
     {
-        pcb->error(pcb, ERROR_TRANSMIT_TIMEOUT);
-    }
-}
-
-void isotp_input_error_handler(void *arg)
-{
-    struct isotp_pcb *pcb;
-
-    if (arg == NULL)
-    {
-        LWCAN_ASSERT("arg != NULL", arg != NULL);
-
-        return;
-    }
-
-    pcb = (struct isotp_pcb *)arg;
-
-    isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
-
-    pcb->input_flow.state = ISOTP_IDLE;
-
-    if (pcb->error != NULL)
-    {
-        pcb->error(pcb, ERROR_RECEIVE_TIMEOUT);
+        pcb->error(pcb, error);
     }
 }
 
