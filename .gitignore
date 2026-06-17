@@ -1,5 +1,5 @@
 .vscode/
-build/
+build*
 *.PVS-Studio.dfo
 *.PVS-Studio.cfg
 *.PVS-Studio.i
