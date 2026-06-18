@@ -8,6 +8,8 @@
 #include "lwcan/canif.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
+#include "lwcan/init.h"
+#include "lwcanarch/arch.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -15,6 +17,9 @@
 /* Test setup and teardown */
 void setUp(void)
 {
+    lwcan_init();
+
+    mock_system_time_set(0);
 }
 
 void tearDown(void)

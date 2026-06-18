@@ -7,6 +7,8 @@
 
 #include "lwcan/length.h"
 #include "lwcan/error.h"
+#include "lwcan/init.h"
+#include "lwcanarch/arch.h"
 
 #include <stdint.h>
 #include <stdbool.h>
@@ -14,6 +16,9 @@
 /* Test setup and teardown */
 void setUp(void)
 {
+    lwcan_init();
+
+    mock_system_time_set(0);
 }
 
 void tearDown(void)

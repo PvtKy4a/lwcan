@@ -6,10 +6,11 @@
 #include "unity.h"
 
 #include "lwcan/timeouts.h"
+#include "lwcan/private/timeouts_private.h"
 #include "lwcan/system.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
-#include "lwcan/private/timeouts_private.h"
+#include "lwcan/init.h"
 #include "lwcanarch/arch.h"
 
 #include <stdint.h>
@@ -22,7 +23,7 @@ static void *callback_arg_value = NULL;
 /* Test setup and teardown */
 void setUp(void)
 {
-    lwcan_timeouts_init();
+    lwcan_init();
 
     mock_system_time_set(0);
 
