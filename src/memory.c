@@ -1,4 +1,5 @@
 #include "lwcan/memory.h"
+#include "lwcan/private/memory_private.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/debug.h"
@@ -32,12 +33,6 @@ typedef struct A_BLOCK_LINK
  */
 static void prvInsertBlockIntoFreeList(BlockLink_t *pxBlockToInsert);
 
-/*
- * Called automatically to setup the required heap structures the first time
- * lwcan_malloc() is called.
- */
-static void prvHeapInit(void);
-
 /*-----------------------------------------------------------*/
 
 /* The size of the structure placed at the beginning of each allocated memory
@@ -68,11 +63,12 @@ void *lwcan_malloc(size_t size)
     void *pvReturn = NULL;
 
     {
-        /* If this is the first call to malloc then the heap will require
-         * initialisation to setup the list of free blocks. */
+        /* requires a prior call to memory_init() */
         if (pxEnd == NULL)
         {
-            prvHeapInit();
+            LWCAN_ASSERT("pxEnd != NULL", pxEnd != NULL);
+
+            return pvReturn;
         }
 
         /* Check the requested block size is not so large that the top bit is
@@ -239,12 +235,14 @@ void lwcan_free(void *p)
 }
 /*-----------------------------------------------------------*/
 
-static void prvHeapInit(void) /*  */
+void memory_init(void)
 {
     BlockLink_t *pxFirstFreeBlock;
     uint8_t *pucAlignedHeap;
     size_t uxAddress;
     size_t xTotalHeapSize = LWCAN_MEM_SIZE;
+
+    memset(memory_heap, 0, LWCAN_MEM_SIZE);
 
     /* Ensure the heap starts on a correctly aligned boundary. */
     uxAddress = (size_t)memory_heap;

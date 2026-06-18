@@ -1,4 +1,5 @@
 #include "lwcan/canif.h"
+#include "lwcan/private/canif_private.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/private/isotp_private.h"
@@ -9,9 +10,16 @@
 
 #define MAX_CANIF_NUM 254
 
-static struct canif *canif_list = NULL;
+static struct canif *canif_list;
 
-static uint8_t canif_num = 0;
+static uint8_t canif_num;
+
+void canif_init(void)
+{
+    canif_list = NULL;
+
+    canif_num = 0;
+}
 
 static lwcanerr_t canif_input(struct canif *canif, void *frame)
 {
