@@ -158,6 +158,8 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 
     store_ff_data(&pcb->input_flow, _frame->data, _frame->len);
 
+    pcb->input_flow.cf_count = 0;
+
     pcb->input_flow.cf_sn = 1;
 
     pcb->input_flow.fs = FS_READY;
@@ -175,8 +177,6 @@ output:
 static void received_cf(struct isotp_pcb *pcb, void *frame)
 {
     uint8_t sn;
-
-    int8_t cf_left;
 
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
@@ -220,7 +220,7 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
         return;
     }
 
-    cf_left = pcb->input_flow.bs - pcb->input_flow.cf_sn;
+    pcb->input_flow.cf_count += 1;
 
     pcb->input_flow.cf_sn += 1;
 
@@ -229,7 +229,7 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
         pcb->input_flow.cf_sn = 0;
     }
 
-    if (pcb->input_flow.bs == 0 || cf_left > 0)
+    if (pcb->input_flow.bs == 0 || pcb->input_flow.cf_count < pcb->input_flow.bs)
     {
         pcb->input_flow.state = ISOTP_WAIT_CF;
 
@@ -241,6 +241,8 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
     pcb->input_flow.fs = FS_READY;
 
 output:
+    pcb->input_flow.cf_count = 0;
+
     pcb->input_flow.state = ISOTP_TX_FC;
 
     lwcan_timeout(0, isotp_output, &pcb->input_flow);

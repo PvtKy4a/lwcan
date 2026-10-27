@@ -42,8 +42,6 @@ static void sent_cf(struct isotp_pcb *pcb)
 {
     uint32_t length;
 
-    int8_t cf_left;
-
     if (pcb->output_flow.remaining_data == 0)
     {
         length = pcb->output_flow.buffer->length;
@@ -60,7 +58,7 @@ static void sent_cf(struct isotp_pcb *pcb)
         return;
     }
 
-    cf_left = pcb->output_flow.bs - pcb->output_flow.cf_sn;
+    pcb->output_flow.cf_count += 1;
 
     pcb->output_flow.cf_sn += 1;
 
@@ -69,7 +67,7 @@ static void sent_cf(struct isotp_pcb *pcb)
         pcb->output_flow.cf_sn = 0;
     }
 
-    if (pcb->output_flow.bs == 0 || cf_left > 0)
+    if (pcb->output_flow.bs == 0 || pcb->output_flow.cf_count < pcb->output_flow.bs)
     {
         pcb->output_flow.state = ISOTP_TX_CF;
 
@@ -77,6 +75,8 @@ static void sent_cf(struct isotp_pcb *pcb)
     }
     else
     {
+        pcb->output_flow.cf_count = 0;
+
         pcb->output_flow.state = ISOTP_WAIT_FC;
 
         lwcan_timeout(ISOTP_N_BS, isotp_timeout_error_handler, &pcb->output_flow);
@@ -272,6 +272,8 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
 #endif
     {
         pcb->output_flow.state = ISOTP_TX_FF;
+
+        pcb->output_flow.cf_count = 0;
 
         pcb->output_flow.cf_sn = 1;
 

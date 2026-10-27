@@ -36,15 +36,17 @@ struct isotp_flow
 
     uint32_t remaining_data;
 
-    uint8_t cf_sn;  /** Consecutive frame serial number */
+    uint8_t cf_count; /* Consecutive frame count in block */
 
-    uint8_t fs; /** Flow status */
+    uint8_t cf_sn; /* Consecutive frame serial number */
 
-    uint8_t bs; /** Block size */
+    uint8_t fs; /* Flow status */
 
-    uint8_t st; /** Separation time */
+    uint8_t bs; /* Block size */
 
-    uint8_t n_wft; /** Number of receiver wait frames */
+    uint8_t st; /* Separation time */
+
+    uint8_t n_wft; /* Number of receiver wait frames */
 };
 
 struct isotp_pcb
