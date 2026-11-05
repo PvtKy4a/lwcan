@@ -85,21 +85,24 @@ static void sent_cf(struct isotp_pcb *pcb)
 
 static void sent_fc(struct isotp_pcb *pcb)
 {
-    if (pcb->input_flow.fs != FS_READY)
+    switch (pcb->input_flow.fs)
     {
+    case FS_READY:
+        pcb->input_flow.state = ISOTP_WAIT_CF;
+        lwcan_timeout(ISOTP_N_CR, isotp_timeout_error_handler, &pcb->input_flow);
+        break;
+    case FS_WAIT: /* Currently not supported */
         pcb->input_flow.state = ISOTP_IDLE;
-
+        LWCAN_ASSERT("pcb->input_flow.fs != FS_WAIT", pcb->input_flow.fs != FS_WAIT);
+        break;
+    case FS_OVERFLOW:
+        pcb->input_flow.state = ISOTP_IDLE;
         if (pcb->error != NULL)
         {
-            pcb->error(pcb->callback_arg, ERROR_ABORTED);
+            pcb->error(pcb->callback_arg, ERROR_MEMORY);
         }
-
-        return;
+        break;
     }
-
-    pcb->input_flow.state = ISOTP_WAIT_CF;
-
-    lwcan_timeout(ISOTP_N_CR, isotp_timeout_error_handler, &pcb->input_flow);
 }
 
 void isotp_sent(void *arg, lwcanerr_t error)

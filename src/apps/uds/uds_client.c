@@ -50,7 +50,7 @@ struct uds_state
 
     connect_cb_function connect_cb;
 
-    void *connetct_cb_arg;
+    void *connect_cb_arg;
 
     const struct uds_context *context;
 
@@ -71,7 +71,7 @@ static void connect_try(void *arg)
 
     if (!uds_state.is_connected && uds_state.connect_try_num == 0)
     {
-        uds_state.connect_cb(uds_state.connetct_cb_arg, ERROR_ABORTED);
+        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
 
         uds_state.state = UDS_IDLE;
 
@@ -89,7 +89,7 @@ static void connect_try(void *arg)
 
     if (ret != ERROR_OK)
     {
-        uds_state.connect_cb(uds_state.connetct_cb_arg, ret);
+        uds_state.connect_cb(uds_state.connect_cb_arg, ret);
 
         uds_state.state = UDS_IDLE;
     }
@@ -163,7 +163,7 @@ static void handle_negative_response(struct lwcan_buffer *buffer)
 {
     if (uds_state.state == UDS_CONNECTING)
     {
-        uds_state.connect_cb(uds_state.connetct_cb_arg, ERROR_ABORTED);
+        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
 
         uds_state.state = UDS_IDLE;
 
@@ -196,7 +196,7 @@ static void handle_positive_response(struct lwcan_buffer *buffer)
     {
         uds_state.is_connected = 1;
 
-        uds_state.connect_cb(uds_state.connetct_cb_arg, ERROR_OK);
+        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_OK);
 
         uds_state.state = UDS_IDLE;
 
@@ -451,7 +451,7 @@ lwcanerr_t uds_client_connect(const struct addr_can *addr, connect_cb_function c
 
     uds_state.connect_cb = cb;
 
-    uds_state.connetct_cb_arg = arg;
+    uds_state.connect_cb_arg = arg;
 
     connect_try(NULL);
 

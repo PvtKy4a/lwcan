@@ -171,6 +171,7 @@ All functions return `lwcanerr_t` (int8_t) error codes:
 | `ERROR_INPROGRESS` | -8 | Operation in progress |
 | `ERROR_ABORTED` | -9 | Operation aborted |
 | `ERROR_CONNECT` | -10 | Not connected |
+| `ERROR_SEQUENCE` | -11 | Sequence missmatch |
 
 ### CAN Interface Layer (CANIF)
 

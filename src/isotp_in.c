@@ -82,7 +82,7 @@ static void received_sf(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
+        pcb->input_flow.state = ISOTP_IDLE;
 
         if (pcb->error != NULL)
         {
@@ -133,14 +133,7 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 
     if (buffer == NULL)
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-
         pcb->input_flow.fs = FS_OVERFLOW;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_MEMORY);
-        }
 
         goto output;
     }
@@ -165,11 +158,11 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
     pcb->input_flow.fs = FS_READY;
 
 output:
+    pcb->input_flow.state = ISOTP_TX_FC;
+
     pcb->input_flow.bs = ISOTP_RECEIVE_BS;
 
     pcb->input_flow.st = ISOTP_RECEIVE_ST;
-
-    pcb->input_flow.state = ISOTP_TX_FC;
 
     lwcan_timeout(0, isotp_output, &pcb->input_flow);
 }
@@ -197,9 +190,14 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
     {
         isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
 
-        pcb->input_flow.fs = FS_OVERFLOW;
+        pcb->input_flow.state = ISOTP_IDLE;
 
-        goto output;
+        if (pcb->error != NULL)
+        {
+            pcb->error(pcb->callback_arg, ERROR_SEQUENCE);
+        }
+
+        return;
     }
 
     store_cf_data(&pcb->input_flow, _frame->data, _frame->len);
@@ -240,7 +238,6 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
 
     pcb->input_flow.fs = FS_READY;
 
-output:
     pcb->input_flow.cf_count = 0;
 
     pcb->input_flow.state = ISOTP_TX_FC;

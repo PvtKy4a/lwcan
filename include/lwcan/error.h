@@ -10,28 +10,30 @@ extern "C"
 
 typedef enum
 {
-/** No error, everything OK. */
+/* No error, everything OK. */
     ERROR_OK = 0,
-/** Illegal argument. */
+/* Illegal argument. */
     ERROR_ARG = -1,
-/** CANIF. */
+/* CANIF. */
     ERROR_CANIF = -2,
-/** CANIF max. */
+/* CANIF max. */
     ERROR_CANIF_MAX = -3,
-/** Low level interface error */
+/* Low level interface error */
     ERROR_IF = -4,
-/** Out of memory error. */
+/* Out of memory error. */
     ERROR_MEMORY = -5,
-/** Transmit timeout. */
+/* Transmit timeout. */
     ERROR_TRANSMIT_TIMEOUT = -6,
-/** Receive timeout. */
+/* Receive timeout. */
     ERROR_RECEIVE_TIMEOUT = -7,
-/** Operation in progress. */
+/* Operation in progress. */
     ERROR_INPROGRESS = -8,
-/** Operation aborted. */
+/* Operation aborted. */
     ERROR_ABORTED = -9,
-/** Not connected. */
-    ERROR_CONNECT = -10
+/* Not connected. */
+    ERROR_CONNECT = -10,
+/* Sequence missmatch. */
+    ERROR_SEQUENCE = -11
 } lwcan_error_enum_t;
 
 typedef int8_t lwcanerr_t;
