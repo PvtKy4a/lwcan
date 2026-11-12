@@ -21,11 +21,11 @@
 
 #define ISOTP_MEM_POOL_SERVICE_END_IDX ((ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM) - 1)
 
-static uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM];
+static uint8_t isotp_mem_pool[ISOTP_MEM_POOL_SIZE + ISOTP_MAX_PCB_NUM] = {0};
 
-static struct isotp_pcb *isotp_pcb_list;
+static struct isotp_pcb *isotp_pcb_list = NULL;
 
-static uint8_t isotp_pcb_num;
+static uint8_t isotp_pcb_num = 0;
 
 #if ISOTP_CANFD
 static const uint8_t padding_length[] = {
@@ -81,15 +81,6 @@ static void isotp_pcb_free(void *mem)
 
     /* freeing the chunk */
     isotp_mem_pool[idx] = 0;
-}
-
-void isotp_init(void)
-{
-    memset(isotp_mem_pool, 0, sizeof(isotp_mem_pool));
-
-    isotp_pcb_list = NULL;
-
-    isotp_pcb_num = 0;
 }
 
 struct isotp_pcb *isotp_new(void)
@@ -493,11 +484,15 @@ void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
 {
     struct lwcan_buffer *buffer_temp;
 
-    if (flow == NULL || buffer == NULL)
+    if (flow == NULL)
     {
         LWCAN_ASSERT("flow != NULL", flow != NULL);
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
 
+        return;
+    }
+
+    if (buffer == NULL)
+    {
         return;
     }
 

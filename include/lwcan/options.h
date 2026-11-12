@@ -8,6 +8,13 @@ extern "C"
 
 #include "lwcan_options.h"
 
+/**
+ * LWCAN_NO_SYSTEM==1: Use lwCAN without OS-awareness (no thread).
+ */
+#if !defined LWCAN_NO_SYSTEM
+#define LWCAN_NO_SYSTEM             0
+#endif
+
 /*
  *  The amount of memory available for sending and receiving
  */
@@ -129,6 +136,31 @@ extern "C"
  */
 #if !defined CANRAW_MAX_PCB_NUM
 #define CANRAW_MAX_PCB_NUM          2
+#endif
+
+/**
+ * LWCAN_THREAD_NAME: The name assigned to the main LwCAN thread.
+ */
+#if !defined LWCAN_THREAD_NAME
+#define LWCAN_THREAD_NAME           "lwcan_thread"
+#endif
+
+/**
+ * LWCAN_THREAD_STACKSIZE: The stack size used by the main LwCAN thread.
+ * The stack size value itself is platform-dependent, but is passed to
+ * system_thread_new() when the thread is created.
+ */
+#if !defined LWCAN_THREAD_STACKSIZE
+#define LWCAN_THREAD_STACKSIZE      0
+#endif
+
+/**
+ * LWCAN_THREAD_PRIO: The priority assigned to the main LwCAN thread.
+ * The priority value itself is platform-dependent, but is passed to
+ * system_thread_new() when the thread is created.
+ */
+#if !defined LWCAN_THREAD_PRIO
+#define LWCAN_THREAD_PRIO           1
 #endif
 
 #ifdef __cplusplus

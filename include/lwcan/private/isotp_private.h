@@ -88,8 +88,6 @@ typedef enum
     ISOTP_WAIT_FC,    /** Waiting for flow control frame */
 } isotp_state_t;
 
-void isotp_init(void);
-
 void isotp_input(struct canif *canif, void *frame);
 
 void isotp_output(void *arg);

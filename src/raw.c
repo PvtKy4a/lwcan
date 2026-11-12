@@ -21,11 +21,11 @@
 
 #define CANRAW_MEM_POOL_SERVICE_END_IDX ((CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM) - 1)
 
-static uint8_t canraw_mem_pool[CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM];
+static uint8_t canraw_mem_pool[CANRAW_MEM_POOL_SIZE + CANRAW_MAX_PCB_NUM] = {0};
 
-static struct canraw_pcb *canraw_pcb_list;
+static struct canraw_pcb *canraw_pcb_list = NULL;
 
-static uint8_t canraw_pcb_num;
+static uint8_t canraw_pcb_num = 0;
 
 static void *canraw_pcb_malloc(void)
 {
@@ -68,15 +68,6 @@ static void canraw_pcb_free(void *mem)
 
     /* freeing the chunk */
     canraw_mem_pool[idx] = 0;
-}
-
-void canraw_init(void)
-{
-    memset(canraw_mem_pool, 0, sizeof(canraw_mem_pool));
-
-    canraw_pcb_list = NULL;
-
-    canraw_pcb_num = 0;
 }
 
 struct canraw_pcb *canraw_new(void)

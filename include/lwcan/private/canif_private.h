@@ -6,8 +6,6 @@ extern "C"
 {
 #endif
 
-void canif_init(void);
-
 #ifdef __cplusplus
 }
 #endif

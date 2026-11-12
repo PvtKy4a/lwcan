@@ -20,8 +20,6 @@ typedef enum
     RAW_INPUT_EATEN,       /* frame handed off and delivered to pcb */
 } canraw_input_state_t;
 
-void canraw_init(void);
-
 canraw_input_state_t canraw_input(struct canif *canif, void *frame);
 
 #endif

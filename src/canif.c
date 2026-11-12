@@ -10,16 +10,9 @@
 
 #define MAX_CANIF_NUM 254
 
-static struct canif *canif_list;
+static struct canif *canif_list = NULL;
 
-static uint8_t canif_num;
-
-void canif_init(void)
-{
-    canif_list = NULL;
-
-    canif_num = 0;
-}
+static uint8_t canif_num = 0;
 
 static lwcanerr_t canif_input(struct canif *canif, void *frame)
 {

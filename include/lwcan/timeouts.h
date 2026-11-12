@@ -15,7 +15,7 @@ extern "C"
  */
 typedef void (*lwcan_timeout_handler)(void *arg);
 
-void lwcan_timeouts_handler(void);
+uint32_t lwcan_timeouts_handler(void);
 
 void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg);
 

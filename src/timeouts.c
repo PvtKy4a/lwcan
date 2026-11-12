@@ -35,9 +35,9 @@ struct lwcan_timeout
     void *arg;
 };
 
-static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM];
+static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM] = {0};
 
-static struct lwcan_timeout *next_timeout;
+static struct lwcan_timeout *next_timeout = 0;
 
 static void *timeout_malloc(void)
 {
@@ -82,14 +82,34 @@ static void timeout_free(void *mem)
     timeout_mem_pool[idx] = 0;
 }
 
-void lwcan_timeouts_init(void)
-{
-    memset(timeout_mem_pool, 0, sizeof(timeout_mem_pool));
+#if !LWCAN_NO_SYSTEM
 
-    next_timeout = NULL;
+static system_thread_t lwcan_thread;
+
+static void lwcan_time(void *arg)
+{
+    (void)arg;
+
+    uint32_t wait;
+
+    while (1)
+    {
+        wait = lwcan_timeouts_handler();
+
+        system_msleep(wait);
+    }
 }
 
-void lwcan_timeouts_handler(void)
+#endif
+
+void lwcan_timeouts_init(void)
+{
+#if !LWCAN_NO_SYSTEM
+    lwcan_thread = system_thread_new(LWCAN_THREAD_NAME, lwcan_time, NULL, LWCAN_THREAD_STACKSIZE, LWCAN_THREAD_PRIO);
+#endif
+}
+
+uint32_t lwcan_timeouts_handler(void)
 {
     uint32_t now;
 
@@ -107,12 +127,12 @@ void lwcan_timeouts_handler(void)
 
         if (timeout == NULL)
         {
-            return;
+            return MAX_TIMEOUT;
         }
 
         if (TIME_LESS_THAN(now, timeout->time))
         {
-            return;
+            return (uint32_t)(timeout->time - now);
         }
 
         next_timeout = timeout->next;
@@ -158,6 +178,9 @@ void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
     {
         next_timeout = new_timeout;
 
+#if !LWCAN_NO_SYSTEM
+        system_wakeup(&lwcan_thread);
+#endif
         return;
     }
 
@@ -181,6 +204,10 @@ void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
             }
         }
     }
+
+#if !LWCAN_NO_SYSTEM
+    system_wakeup(&lwcan_thread);
+#endif
 }
 
 void lwcan_untimeout(lwcan_timeout_handler handler, void *arg)
@@ -207,7 +234,11 @@ void lwcan_untimeout(lwcan_timeout_handler handler, void *arg)
 
             timeout_free(timeout);
 
-            return;
+            break;
         }
     }
+
+#if !LWCAN_NO_SYSTEM
+    system_wakeup(&lwcan_thread);
+#endif
 }
