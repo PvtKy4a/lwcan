@@ -35,7 +35,7 @@ static void sent_ff(struct isotp_pcb *pcb)
 
     pcb->output_flow.state = ISOTP_WAIT_FC;
 
-    lwcan_timeout(ISOTP_N_BS, isotp_timeout_error_handler, &pcb->output_flow);
+    lwcan_timeout(&pcb->output_flow.error_timeout, ISOTP_N_BS, isotp_timeout_error_handler, &pcb->output_flow);
 }
 
 static void sent_cf(struct isotp_pcb *pcb)
@@ -71,7 +71,7 @@ static void sent_cf(struct isotp_pcb *pcb)
     {
         pcb->output_flow.state = ISOTP_TX_CF;
 
-        lwcan_timeout(pcb->output_flow.st, isotp_output, &pcb->output_flow);
+        lwcan_timeout(&pcb->output_flow.output_timeout, pcb->output_flow.st, isotp_output, &pcb->output_flow);
     }
     else
     {
@@ -79,7 +79,7 @@ static void sent_cf(struct isotp_pcb *pcb)
 
         pcb->output_flow.state = ISOTP_WAIT_FC;
 
-        lwcan_timeout(ISOTP_N_BS, isotp_timeout_error_handler, &pcb->output_flow);
+        lwcan_timeout(&pcb->output_flow.error_timeout, ISOTP_N_BS, isotp_timeout_error_handler, &pcb->output_flow);
     }
 }
 
@@ -89,7 +89,7 @@ static void sent_fc(struct isotp_pcb *pcb)
     {
     case FS_READY:
         pcb->input_flow.state = ISOTP_WAIT_CF;
-        lwcan_timeout(ISOTP_N_CR, isotp_timeout_error_handler, &pcb->input_flow);
+        lwcan_timeout(&pcb->input_flow.error_timeout, ISOTP_N_CR, isotp_timeout_error_handler, &pcb->input_flow);
         break;
     case FS_WAIT: /* Currently not supported */
         pcb->input_flow.state = ISOTP_IDLE;
@@ -287,7 +287,7 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
         pcb->output_flow.state = ISOTP_TX_SF;
     }
 
-    lwcan_timeout(0, isotp_output, &pcb->output_flow);
+    lwcan_timeout(&pcb->output_flow.output_timeout, 0, isotp_output, &pcb->output_flow);
 
     return ERROR_OK;
 }

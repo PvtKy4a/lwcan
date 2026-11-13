@@ -10,6 +10,7 @@ extern "C"
 
 #if LWCAN_ISOTP /* don't build if not configured for use in lwcan_options.h */
 
+#include "lwcan/timeouts.h"
 #include "lwcan/error.h"
 #include "lwcan/buffer.h"
 #include "lwcan/can.h"
@@ -33,6 +34,10 @@ struct isotp_flow
     struct isotp_pcb *pcb;
 
     struct lwcan_buffer *buffer;
+
+    struct lwcan_timeout output_timeout;
+
+    struct lwcan_timeout error_timeout;
 
     uint32_t remaining_data;
 

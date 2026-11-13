@@ -57,9 +57,17 @@ struct uds_state
     void *handle;
 
     struct isotp_pcb *isotp_pcb;
+
+    struct lwcan_timeout connect_timeout;
+
+    struct lwcan_timeout s3_timeout;
+
+    struct lwcan_timeout p2_timeout;
+
+    struct lwcan_timeout p2_star_timeout;
 };
 
-static volatile struct uds_state uds_state;
+static struct uds_state uds_state;
 
 static void connect_try(void *arg)
 {
@@ -134,7 +142,7 @@ static void p2_timer_handler(void *arg)
             connect_timeout = UDS_CONNECT_RETRY_TIMEOUT - connect_passed_time;
         }
 
-        lwcan_timeout(connect_timeout, connect_try, NULL);
+        lwcan_timeout(&uds_state.connect_timeout, connect_timeout, connect_try, NULL);
 
         return;
     }
@@ -177,7 +185,7 @@ static void handle_negative_response(struct lwcan_buffer *buffer)
             uds_state.state = UDS_RESPONSE_PENDING;
         }
 
-        lwcan_timeout(uds_state.p2_star, p2_star_timer_handler, NULL);
+        lwcan_timeout(&uds_state.p2_star_timeout, uds_state.p2_star, p2_star_timer_handler, NULL);
 
         return;
     }
@@ -224,13 +232,13 @@ static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buf
     switch (uds_state.state)
     {
     case UDS_WAIT_RESPONSE:
-        lwcan_untimeout(p2_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_timeout);
         break;
     case UDS_CONNECTING:
-        lwcan_untimeout(p2_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_timeout);
         break;
     case UDS_RESPONSE_PENDING:
-        lwcan_untimeout(p2_star_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_star_timeout);
         break;
     default:
         break;
@@ -262,10 +270,10 @@ static void uds_receive_ff(void *arg, struct isotp_pcb *isotp_pcb)
     switch (uds_state.state)
     {
     case UDS_WAIT_RESPONSE:
-        lwcan_untimeout(p2_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_timeout);
         break;
     case UDS_RESPONSE_PENDING:
-        lwcan_untimeout(p2_star_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_star_timeout);
         break;
     default:
         break;
@@ -293,7 +301,7 @@ static void uds_error(void *arg, lwcanerr_t error)
             connect_timeout = UDS_CONNECT_RETRY_TIMEOUT - connect_passed_time;
         }
 
-        lwcan_timeout(connect_timeout, connect_try, NULL);
+        lwcan_timeout(&uds_state.connect_timeout, connect_timeout, connect_try, NULL);
 
         return;
     }
@@ -306,10 +314,10 @@ static void uds_error(void *arg, lwcanerr_t error)
     switch (uds_state.state)
     {
     case UDS_WAIT_RESPONSE:
-        lwcan_untimeout(p2_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_timeout);
         break;
     case UDS_RESPONSE_PENDING:
-        lwcan_untimeout(p2_star_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.p2_star_timeout);
         break;
     default:
         break;
@@ -331,7 +339,7 @@ static void uds_sent(void *arg, struct isotp_pcb *pcb, uint32_t length)
 
     if (uds_state.state == UDS_CONNECTING)
     {
-        lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
+        lwcan_timeout(&uds_state.p2_timeout, uds_state.p2, p2_timer_handler, NULL);
 
         return;
     }
@@ -345,16 +353,16 @@ static void uds_sent(void *arg, struct isotp_pcb *pcb, uint32_t length)
     {
         uds_state.state = UDS_WAIT_RESPONSE;
 
-        lwcan_timeout(uds_state.p2, p2_timer_handler, NULL);
+        lwcan_timeout(&uds_state.p2_timeout, uds_state.p2, p2_timer_handler, NULL);
     }
     else
     {
         uds_state.state = UDS_IDLE;
     }
 
-    lwcan_untimeout(s3_timer_handler, NULL);
+    lwcan_untimeout(&uds_state.s3_timeout);
 
-    lwcan_timeout(UDS_S3_CLIENT, s3_timer_handler, NULL);
+    lwcan_timeout(&uds_state.s3_timeout, UDS_S3_CLIENT, s3_timer_handler, NULL);
 }
 
 /**
@@ -408,7 +416,7 @@ lwcanerr_t uds_client_deinit(void)
 
     if (uds_state.is_connected)
     {
-        lwcan_untimeout(s3_timer_handler, NULL);
+        lwcan_untimeout(&uds_state.s3_timeout);
     }
 
     memset((void *)&uds_state, 0, sizeof(uds_state));
@@ -471,11 +479,11 @@ void uds_client_disconnect(void)
 
     uds_state.state = UDS_IDLE;
 
-    lwcan_untimeout(p2_timer_handler, NULL);
+    lwcan_untimeout(&uds_state.p2_timeout);
 
-    lwcan_untimeout(p2_star_timer_handler, NULL);
+    lwcan_untimeout(&uds_state.p2_star_timeout);
 
-    lwcan_untimeout(s3_timer_handler, NULL);
+    lwcan_untimeout(&uds_state.s3_timeout);
 
     uds_state.is_connected = 0;
 

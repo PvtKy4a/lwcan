@@ -12,75 +12,7 @@
 
 #define TIME_LESS_THAN(time, compare_to) ((((uint32_t)(time - compare_to)) > MAX_TIMEOUT) ? 1 : 0)
 
-#define TIMEOUT_MEM_CHUNK_SIZE sizeof(struct lwcan_timeout)
-
-#define TIMEOUT_MEM_POOL_SIZE (TIMEOUT_MEM_CHUNK_SIZE * LWCAN_TIMEOUTS_NUM)
-
-#define TIMEOUT_MEM_POOL_BEGIN_ADDR (uint8_t *)(&timeout_mem_pool[0])
-
-#define TIMEOUT_MEM_POOL_END_ADDR (uint8_t *)(&timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE - 1])
-
-#define TIMEOUT_MEM_POOL_SERVICE_BEGIN_IDX TIMEOUT_MEM_POOL_SIZE
-
-#define TIMEOUT_MEM_POOL_SERVICE_END_IDX ((TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM) - 1)
-
-struct lwcan_timeout
-{
-    struct lwcan_timeout *next;
-
-    uint32_t time;
-
-    lwcan_timeout_handler handler;
-
-    void *arg;
-};
-
-static uint8_t timeout_mem_pool[TIMEOUT_MEM_POOL_SIZE + LWCAN_TIMEOUTS_NUM] = {0};
-
 static struct lwcan_timeout *next_timeout = 0;
-
-static void *timeout_malloc(void)
-{
-    for (uint16_t i = TIMEOUT_MEM_POOL_SERVICE_BEGIN_IDX; i <= TIMEOUT_MEM_POOL_SERVICE_END_IDX; i++)
-    {
-        if (timeout_mem_pool[i] == 0)
-        {
-            timeout_mem_pool[i] = 0xAA;
-
-            return (void *)&timeout_mem_pool[(i - TIMEOUT_MEM_POOL_SERVICE_BEGIN_IDX)  * TIMEOUT_MEM_CHUNK_SIZE];
-        }
-    }
-
-    return NULL;
-}
-
-static void timeout_free(void *mem)
-{
-    uint16_t idx;
-
-    uint8_t addr;
-
-    /* Checking an address for inclusion in a memory pool */
-    if (mem == NULL || (uint8_t *)mem < TIMEOUT_MEM_POOL_BEGIN_ADDR || (uint8_t *)mem > TIMEOUT_MEM_POOL_END_ADDR)
-    {
-        return;
-    }
-
-    /* get address within memory pool */
-    addr = (uint8_t *)mem - TIMEOUT_MEM_POOL_BEGIN_ADDR;
-
-    /* check address for multiple of chunk size */
-    if ((addr % TIMEOUT_MEM_CHUNK_SIZE) != 0)
-    {
-        return;
-    }
-
-    /* get the index of the element which means that the chunk has been allocated */
-    idx = TIMEOUT_MEM_POOL_SERVICE_BEGIN_IDX + (addr / TIMEOUT_MEM_CHUNK_SIZE);
-
-    /* freeing the chunk */
-    timeout_mem_pool[idx] = 0;
-}
 
 #if !LWCAN_NO_SYSTEM
 
@@ -141,8 +73,6 @@ uint32_t lwcan_timeouts_handler(void)
 
         arg = timeout->arg;
 
-        timeout_free(timeout);
-
         if (handler != NULL)
         {
             handler(arg);
@@ -152,31 +82,29 @@ uint32_t lwcan_timeouts_handler(void)
     } while (1);
 }
 
-void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
+void lwcan_timeout(struct lwcan_timeout *timeout, uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
 {
     uint32_t timeout_time;
 
-    struct lwcan_timeout *new_timeout, *timeout;
+    struct lwcan_timeout *timeout_temp;
 
-    new_timeout = (struct lwcan_timeout *)timeout_malloc();
-
-    if (new_timeout == NULL)
+    if (timeout == NULL)
     {
-        LWCAN_ASSERT("new_timeout != NULL", new_timeout != NULL);
+        LWCAN_ASSERT("timeout != NULL", timeout != NULL);
 
         return;
     }
 
     timeout_time = (uint32_t)(system_now() + time_ms);
 
-    new_timeout->next = NULL;
-    new_timeout->handler = handler;
-    new_timeout->arg = arg;
-    new_timeout->time = timeout_time;
+    timeout->next = NULL;
+    timeout->handler = handler;
+    timeout->arg = arg;
+    timeout->time = timeout_time;
 
     if (next_timeout == NULL)
     {
-        next_timeout = new_timeout;
+        next_timeout = timeout;
 
 #if !LWCAN_NO_SYSTEM
         system_wakeup(&lwcan_thread);
@@ -184,21 +112,21 @@ void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
         return;
     }
 
-    if (TIME_LESS_THAN(new_timeout->time, next_timeout->time))
+    if (TIME_LESS_THAN(timeout->time, next_timeout->time))
     {
-        new_timeout->next = next_timeout;
+        timeout->next = next_timeout;
 
-        next_timeout = new_timeout;
+        next_timeout = timeout;
     }
     else
     {
-        for (timeout = next_timeout; timeout != NULL; timeout = timeout->next)
+        for (timeout_temp = next_timeout; timeout_temp != NULL; timeout_temp = timeout_temp->next)
         {
-            if ((timeout->next == NULL) || TIME_LESS_THAN(new_timeout->time, timeout->next->time))
+            if ((timeout_temp->next == NULL) || TIME_LESS_THAN(timeout->time, timeout_temp->next->time))
             {
-                new_timeout->next = timeout->next;
+                timeout->next = timeout_temp->next;
 
-                timeout->next = new_timeout;
+                timeout_temp->next = timeout;
 
                 break;
             }
@@ -210,29 +138,27 @@ void lwcan_timeout(uint32_t time_ms, lwcan_timeout_handler handler, void *arg)
 #endif
 }
 
-void lwcan_untimeout(lwcan_timeout_handler handler, void *arg)
+void lwcan_untimeout(struct lwcan_timeout *timeout)
 {
-    struct lwcan_timeout *timeout, *previous_timeout;
+    struct lwcan_timeout *timeout_next, *previous_timeout;
 
     if (next_timeout == NULL)
     {
         return;
     }
 
-    for (timeout = next_timeout, previous_timeout = NULL; timeout != NULL; previous_timeout = timeout, timeout = timeout->next)
+    for (timeout_next = next_timeout, previous_timeout = NULL; timeout_next != NULL; previous_timeout = timeout_next, timeout_next = timeout_next->next)
     {
-        if ((timeout->handler == handler) && (timeout->arg == arg))
+        if (timeout_next == timeout)
         {
             if (previous_timeout == NULL)
             {
-                next_timeout = timeout->next;
+                next_timeout = timeout_next->next;
             }
             else
             {
-                previous_timeout->next = timeout->next;
+                previous_timeout->next = timeout_next->next;
             }
-
-            timeout_free(timeout);
 
             break;
         }
