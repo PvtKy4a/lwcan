@@ -15,10 +15,6 @@ lwcan is a lightweight, portable C library for Controller Area Network (CAN) com
 - Timeout management system
 - CAN FD support (optional)
 
-## Documentation
-
-📚 **Full documentation is available in [docs/DOCUMENTATION.md](docs/DOCUMENTATION.md)**
-
 ## Quick Start
 
 ### Integration
@@ -46,31 +42,33 @@ lwcan_init();
 struct canif my_canif;
 canif_add(&my_canif, "can0", my_init_function);
 
-// Periodic call to the timeout handler.
-while (1) {
-    lwcan_timeouts_handler();
-    sleep_ms(1);
-}
+// By default, lwcan runs a background thread that handles timeouts automatically.
+// See docs/DOCUMENTATION.md#LWCAN_NO_SYSTEM-Threaded-vs-Polling-Mode for details.
 ```
 
-## API Overview
+## API Layers
 
 The library provides the following protocol layers:
 
-- **RAW** - Direct CAN frame access
-- **ISOTP** - ISO 15765-2 transport protocol
-- **CANIF** - CAN interface abstraction
-- **UDS Client** - Unified Diagnostic Services implementation
+| Layer | Description |
+|-------|-------------|
+| **CANIF** | CAN interface abstraction layer |
+| **RAW** | Direct CAN frame access |
+| **ISOTP** | ISO 15765-2 transport protocol |
+| **UDS Client** | Unified Diagnostic Services implementation |
 
-See the [API Reference](docs/DOCUMENTATION.md#api-reference) in the full documentation for detailed information.
+## Documentation
+
+- 📘 **[Full Documentation](docs/DOCUMENTATION.md)** — Complete API reference, examples, configuration options, and platform integration guide.
 
 ## Configuration
 
-Customize the library behavior by creating `lwcan_options.h` in your project. See [Configuration](docs/DOCUMENTATION.md#configuration) in the documentation for available options.
+Customize the library behavior by creating `lwcan_options.h` in your project. See [Configuration](docs/DOCUMENTATION.md#configuration) in the full documentation for available options.
 
 ## Examples
 
-See the [Examples](docs/DOCUMENTATION.md#examples) section in the documentation for implementation examples including:
+See the [Examples](docs/DOCUMENTATION.md#examples) section in the full documentation for implementation examples:
+
 - RAW CAN Communication
 - ISOTP Communication
 - UDS Client

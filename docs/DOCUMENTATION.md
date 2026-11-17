@@ -1,5 +1,7 @@
 # lwcan Library Documentation
 
+> 📘 This is the detailed API reference and technical guide. For a quick overview and getting started, see [README.md](../README.md).
+
 ## Overview
 
 lwcan is a lightweight, portable C library for Controller Area Network (CAN) communication. It provides a flexible framework for implementing CAN protocols including classical CAN, CAN FD, and transport protocols like ISOTP (ISO 15765-2).
@@ -103,6 +105,38 @@ struct lwcan_buffer {
 ```
 
 Buffers are allocated dynamically and support chaining for segmented messages.
+
+#### Buffer API
+
+```c
+struct lwcan_buffer *lwcan_buffer_new(uint32_t length);
+```
+Creates a new buffer with the specified length.
+
+```c
+void lwcan_buffer_delete(struct lwcan_buffer *buffer);
+```
+Deletes a buffer and frees its memory.
+
+```c
+lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length);
+```
+Copies data into the buffer from the beginning.
+
+```c
+lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length, uint32_t offset);
+```
+Copies data into the buffer at the specified offset.
+
+```c
+lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *destination, uint32_t length);
+```
+Copies data from the buffer to the destination.
+
+```c
+lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *destination, uint32_t length, uint32_t offset);
+```
+Copies data from the buffer at the specified offset to the destination.
 
 ---
 
@@ -246,6 +280,22 @@ Converts interface index to name.
 const char *canif_index_to_name(uint8_t index);
 ```
 
+#### `canif_get_name()`
+
+Returns the name of a CAN interface.
+
+```c
+const char *canif_get_name(struct canif *canif);
+```
+
+#### `canif_get_index()`
+
+Returns the index of a CAN interface.
+
+```c
+uint8_t canif_get_index(struct canif *canif);
+```
+
 ### RAW Layer
 
 The RAW layer provides direct access to CAN frames without protocol overhead.
@@ -311,6 +361,17 @@ Sets the receive callback function.
 lwcanerr_t canraw_set_receive_callback(
     struct canraw_pcb *pcb,
     canraw_receive_function receive
+);
+```
+
+#### `canraw_set_callback_arg()`
+
+Sets the callback argument for a RAW PCB.
+
+```c
+lwcanerr_t canraw_set_callback_arg(
+    struct canraw_pcb *pcb,
+    void *arg
 );
 ```
 
@@ -403,6 +464,16 @@ lwcanerr_t isotp_received(struct isotp_pcb *pcb, struct lwcan_buffer *buffer);
 
 #### ISOTP Callbacks
 
+##### Setting Callbacks
+
+```c
+lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive);
+lwcanerr_t isotp_set_receive_ff_callback(struct isotp_pcb *pcb, isotp_receive_ff_function receive_ff);
+lwcanerr_t isotp_set_sent_callback(struct isotp_pcb *pcb, isotp_sent_function sent);
+lwcanerr_t isotp_set_error_callback(struct isotp_pcb *pcb, isotp_error_function error);
+lwcanerr_t isotp_set_callback_arg(struct isotp_pcb *pcb, void *arg);
+```
+
 ##### Receive Callback
 
 ```c
@@ -451,6 +522,8 @@ Defined in `lwcan/options.h`:
 
 | Option | Default | Description |
 |--------|---------|-------------|
+| `LWCAN_NO_SYSTEM` | 0 | Use lwCAN without OS-awareness (no thread) |
+| `LWCAN_MEM_SIZE` | 512 | Total memory pool size in bytes |
 | `LWCAN_ISOTP` | 1 | Enable ISOTP support |
 | `ISOTP_CANFD` | 0 | Enable CAN FD support |
 | `ISOTP_CANFD_BRS` | 1 | Enable bitrate switch |
@@ -464,8 +537,76 @@ Defined in `lwcan/options.h`:
 | `ISOTP_N_BR` | 5 | Block receive timeout (ms) |
 | `ISOTP_N_CR` | 1000 | Consecutive frame receive timeout (ms) |
 | `ISOTP_MAX_PCB_NUM` | 2 | Maximum concurrent connections |
+| `LWCAN_RAW` | 0 | Enable RAW layer |
+| `CANRAW_MAX_PCB_NUM` | 2 | Maximum RAW connections |
+| `LWCAN_THREAD_NAME` | "lwcan_thread" | Thread name (when LWCAN_NO_SYSTEM=0) |
+| `LWCAN_THREAD_STACKSIZE` | 0 | Thread stack size in bytes (platform-dependent) |
+| `LWCAN_THREAD_PRIO` | 1 | Thread priority (platform-dependent) |
+
+### LWCAN_NO_SYSTEM: Threaded vs Polling Mode
+
+The `LWCAN_NO_SYSTEM` option controls how the library handles internal processing:
+
+#### Default Mode (`LWCAN_NO_SYSTEM = 0`) — Background Thread
+
+When `LWCAN_NO_SYSTEM` is disabled (default), lwcan creates a dedicated background thread on `lwcan_init()`. This thread continuously calls `lwcan_timeouts_handler()` and sleeps for the remaining time until the next timeout.
+
+**Behavior:**
+- A thread is created with name `LWCAN_THREAD_NAME`, priority `LWCAN_THREAD_PRIO`, and stack size `LWCAN_THREAD_STACKSIZE`
+- The thread calls `system_msleep()` for the remaining time returned by `lwcan_timeouts_handler()`
+- When a new timeout is registered or removed, the thread is woken up via `system_wakeup()`
+- **User code does not need to call `lwcan_timeouts_handler()` manually**
+
+```c
+// No manual polling needed — the library handles it internally
+lwcan_init();
+// ... use the library ...
+// lwcan_timeouts_handler() is called automatically by the background thread
+```
+
+#### Polling Mode (`LWCAN_NO_SYSTEM = 1`) — Manual Polling
+
+When `LWCAN_NO_SYSTEM` is set to 1, lwcan runs without OS awareness. No thread is created, and the user is responsible for calling `lwcan_timeouts_handler()` periodically.
+
+**Behavior:**
+- No thread is created on `lwcan_init()`
+- The user must call `lwcan_timeouts_handler()` in their own loop (e.g., main loop, ISR, or timer callback)
+- `system_msleep()` and `system_wakeup()` are no-ops
+- `system_now()` must still be implemented for time tracking
+
+```c
+// User must manually poll the timeout handler
+lwcan_init();
+
+while (1) {
+    // ... application logic ...
+    lwcan_timeouts_handler();  // Required: processes expired timeouts
+    // system_msleep() is a no-op, use your platform's sleep function
+}
+```
+
+**When to use Polling Mode:**
+- Bare-metal applications without an RTOS
+- When the application needs full control over the processing loop
+- When integrating lwcan into an existing event loop or timer callback
+- When thread resources are constrained
+
+#### Platform Functions
+
+When `LWCAN_NO_SYSTEM = 0`, the following platform functions must be implemented in `lwcanarch/system_arch.h`:
+
+| Function | Purpose |
+|----------|---------|
+| `system_thread_new()` | Create a new thread |
+| `system_msleep()` | Sleep for specified milliseconds |
+| `system_wakeup()` | Wake up a sleeping thread |
+| `system_now()` | Return current time in milliseconds |
+
+When `LWCAN_NO_SYSTEM = 1`, only `system_now()` is required.
 
 ### Timeout Management
+
+> **See also:** [LWCAN_NO_SYSTEM: Threaded vs Polling Mode](#LWCAN_NO_SYSTEM-Threaded-vs-Polling-Mode) — explains how the library processes timeouts in background thread vs manual polling mode.
 
 #### `lwcan_timeout()`
 
@@ -473,6 +614,7 @@ Registers a timeout callback.
 
 ```c
 void lwcan_timeout(
+    struct lwcan_timeout *timeout,
     uint32_t time_ms,
     lwcan_timeout_handler handler,
     void *arg
@@ -480,6 +622,7 @@ void lwcan_timeout(
 ```
 
 **Parameters:**
+- `timeout` - Pointer to `lwcan_timeout` structure to manage
 - `time_ms` - Timeout in milliseconds
 - `handler` - Callback function
 - `arg` - Argument passed to callback
@@ -489,16 +632,21 @@ void lwcan_timeout(
 Cancels a registered timeout.
 
 ```c
-void lwcan_untimeout(lwcan_timeout_handler handler, void *arg);
+void lwcan_untimeout(struct lwcan_timeout *timeout);
 ```
+
+**Parameters:**
+- `timeout` - Pointer to `lwcan_timeout` structure to cancel
 
 #### `lwcan_timeouts_handler()`
 
-Processes expired timeouts (called periodically).
+Processes expired timeouts (called periodically). Returns remaining time until next timeout.
 
 ```c
-void lwcan_timeouts_handler(void);
+uint32_t lwcan_timeouts_handler(void);
 ```
+
+**Returns:** Remaining time in milliseconds until the next scheduled timeout, or 0 if no timeouts are pending.
 
 ### UDS Client
 
@@ -548,12 +696,29 @@ Sets the UDS context callbacks.
 lwcanerr_t uds_set_context(const struct uds_context *context, void *handle);
 ```
 
+#### `uds_set_p2_timer()`
+
+Sets the P2 timer value.
+
+```c
+lwcanerr_t uds_set_p2_timer(uint32_t time);
+```
+
+#### `uds_set_p2_star_timer()`
+
+Sets the P2* timer value.
+
+```c
+lwcanerr_t uds_set_p2_star_timer(uint32_t time);
+```
+
 **Context structure:**
 ```c
 struct uds_context {
-    void (*positive_response)(void *handle, uint8_t *data, uint32_t size);
-    void (*negative_response)(void *handle, uint8_t rejected_sid, uint8_t nrc);
-    void (*error)(void *handle, lwcanerr_t error);
+    void (*request)(void *handle, uint8_t sid, uint8_t *data, uint32_t size);           /* For server (not implemented yet) */
+    void (*positive_response)(void *handle, uint8_t *data, uint32_t size);               /* For client */
+    void (*negative_response)(void *handle, uint8_t rejected_sid, uint8_t nrc);          /* For client */
+    void (*error)(void *handle, lwcanerr_t error);                                       /* Common */
 };
 ```
 
@@ -584,8 +749,8 @@ lwcanerr_t uds_send_request(
 | `UDS_P2_STAR_DEFAULT` | 500 | P2* timer default (ms) |
 | `UDS_CONNECT_RETRY_NUM` | 20 | Connection retries |
 | `UDS_CONNECT_RETRY_TIMEOUT` | 50 | Retry timeout (ms) |
-| `UDS_KEEP_SESSION` | 1 | Keep session with tester present |
-| `UDS_KEEP_SESSION_SUPPRESS` | 0x80 | Tester present subfunction |
+| `UDS_KEEP_SESSION` | 1 | Keep session with tester present (uses 0x31 SetDiagnosticSessionControl) |
+| `UDS_KEEP_SESSION_SUPPRESS` | 0x80 | Tester present subfunction (suppress response) |
 
 ---
 
@@ -597,11 +762,10 @@ Create `lwcan_options.h` in your project and modify configuration:
 
 ```c
 /* Memory configuration */
-#define LWCAN_MEM_SIZE              1024
-#define LWCAN_TIMEOUTS_NUM          20
+#define LWCAN_MEM_SIZE              512
 
 /* Protocol enable/disable */
-#define LWCAN_ISOTP                 0
+#define LWCAN_ISOTP                 1
 #define LWCAN_RAW                   1
 
 /* Protocol-specific options */
@@ -724,11 +888,6 @@ void raw_receive_example(void *arg, struct canraw_pcb *pcb, void *frame) {
 }
 
 void raw_send_example(void) {
-    lwcan_init();
-
-    // Initialize CAN interface (platform-specific)
-    // canif_add(...);
-
     // Create RAW PCB
     struct canraw_pcb *pcb = canraw_new();
 
@@ -748,12 +907,6 @@ void raw_send_example(void) {
         .data = {0x01, 0x02, 0x03, 0x04}
     };
     canraw_send(pcb, &frame, sizeof(frame), 1000, NULL, NULL);
-
-    // The stack needs a periodic call to the timeout handler.
-    while (1) {
-        lwcan_timeouts_handler();
-        sleep_ms(1);
-    }
 }
 ```
 
@@ -769,11 +922,6 @@ void isotp_receive(void *arg, struct isotp_pcb *pcb, struct lwcan_buffer *buffer
 }
 
 void isotp_send_example(void) {
-    lwcan_init();
-
-    // Initialize CAN interface
-    // canif_add(...);
-
     // Create ISOTP PCB
     struct isotp_pcb *pcb = isotp_new();
 
@@ -793,12 +941,6 @@ void isotp_send_example(void) {
     // Send long message (will be segmented)
     const char *message = "This is a long message that needs segmentation";
     isotp_send(pcb, (const uint8_t *)message, strlen(message));
-
-    // The stack needs a periodic call to the timeout handler.
-    while (1) {
-        lwcan_timeouts_handler();
-        sleep_ms(1);
-    }
 }
 ```
 
@@ -817,8 +959,7 @@ void uds_positive_response(void *handle, uint8_t *data, uint32_t size) {
 }
 
 void uds_negative_response(void *handle, uint8_t rejected_sid, uint8_t nrc) {
-    printf("UDS Negative Response: SID=0x%02X, NRC=0x%02X\n",
-           rejected_sid, nrc);
+    printf("UDS Negative Response: SID=0x%02X, NRC=0x%02X\n", rejected_sid, nrc);
 }
 
 void uds_error(void *handle, lwcanerr_t error) {
@@ -826,8 +967,6 @@ void uds_error(void *handle, lwcanerr_t error) {
 }
 
 void uds_example(void) {
-    lwcan_init();
-
     // Initialize UDS client
     uds_client_init();
 
@@ -851,14 +990,8 @@ void uds_example(void) {
     uds_client_connect(&addr, NULL, NULL);
 
     // Send diagnostic request
-    uint8_t request[] = {0x22, 0xF1, 0x90};  // Read VIN
+    uint8_t request[] = {0x22, 0xF1, 0x90};
     uds_send_request(request, 3, 1);
-
-    // The stack needs a periodic call to the timeout handler.
-    while (1) {
-        lwcan_timeouts_handler();
-        sleep_ms(1);
-    }
 }
 ```
 
@@ -873,8 +1006,6 @@ void uds_example(void) {
 // #define ISOTP_CANFD_BRS 1
 
 void canfd_isotp_example(void) {
-    lwcan_init();
-
     struct isotp_pcb *pcb = isotp_new();
 
     struct addr_can addr = {
@@ -890,12 +1021,6 @@ void canfd_isotp_example(void) {
     uint8_t data[64];
     memset(data, 0x55, sizeof(data));
     isotp_send(pcb, data, sizeof(data));
-
-    // The stack needs a periodic call to the timeout handler.
-    while (1) {
-        lwcan_timeouts_handler();
-        sleep_ms(1);
-    }
 }
 ```
 
@@ -907,8 +1032,7 @@ lwcan uses pool-based memory allocation for predictable behavior:
 
 - ISOTP PCBs: `ISOTP_MAX_PCB_NUM` (default: 2)
 - RAW PCBs: `CANRAW_MAX_PCB_NUM` (default: 2)
-- Timeouts: `LWCAN_TIMEOUTS_NUM` (default: 10)
-- Buffer memory: `LWCAN_MEM_SIZE` (default: 512 bytes)
+- Buffer memory pool: `LWCAN_MEM_SIZE` (default: 512 bytes)
 
 Memory pool sizes can be configured in `lwcan_options.h`.
 
