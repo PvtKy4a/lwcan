@@ -17,7 +17,7 @@ set(LWCAN_SOURCES
     ${LWCAN_ROOT}/src/memory.c
     ${LWCAN_ROOT}/src/raw.c
     ${LWCAN_ROOT}/src/timeouts.c
-    mock/lwcanarch/arch.c)
+    ${CMAKE_CURRENT_SOURCE_DIR}/mock/system_arch.c)
 
 add_subdirectory(unity)
 
@@ -26,7 +26,7 @@ function(add_unity_test TEST_NAME TEST_SOURCES)
 
     target_include_directories(${TEST_NAME} PRIVATE
         ${LWCAN_ROOT}/include
-        mock)
+        ${CMAKE_CURRENT_SOURCE_DIR}/mock)
 
     target_link_libraries(${TEST_NAME} PRIVATE unity)
 

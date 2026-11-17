@@ -1,3 +1,5 @@
+#include "lwcanarch/system_arch.h"
+
 #include "lwcan/system.h"
 
 static uint32_t mock_platform_time = 0;

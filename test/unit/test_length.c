@@ -8,7 +8,7 @@
 #include "lwcan/length.h"
 #include "lwcan/error.h"
 #include "lwcan/init.h"
-#include "lwcanarch/arch.h"
+#include "lwcanarch/system_arch.h"
 
 #include <stdint.h>
 #include <stdbool.h>

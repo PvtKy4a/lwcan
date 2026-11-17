@@ -6,6 +6,8 @@ extern "C"
 {
 #endif
 
+#include "lwcan/options.h"
+
 #include <stdint.h>
 
 #if LWCAN_NO_SYSTEM
@@ -15,6 +17,10 @@ extern "C"
 #define system_msleep(t)
 
 #define system_wakeup(t)
+
+#define system_arch_protect()
+
+#define system_arch_unprotect(p)
 
 #else
 
@@ -40,13 +46,13 @@ typedef void (*lwcan_thread_fn)(void *arg);
  * @param prio priority of the new thread (may be ignored by ports) */
 system_thread_t system_thread_new(const char *name, lwcan_thread_fn thread, void *arg, int stacksize, int prio);
 
-#endif
-
-uint32_t system_now(void);
-
 system_prot_t system_arch_protect(void);
 
 void system_arch_unprotect(system_prot_t pval);
+
+#endif
+
+uint32_t system_now(void);
 
 #ifdef __cplusplus
 }

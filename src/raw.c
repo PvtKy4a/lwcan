@@ -29,7 +29,7 @@ static uint8_t canraw_pcb_num = 0;
 
 static void *canraw_pcb_malloc(void)
 {
-    for (uint16_t i = CANRAW_MEM_POOL_SERVICE_BEGIN_IDX; i <= CANRAW_MEM_POOL_SERVICE_END_IDX; i++)
+    for (size_t i = CANRAW_MEM_POOL_SERVICE_BEGIN_IDX; i <= CANRAW_MEM_POOL_SERVICE_END_IDX; i++)
     {
         if (canraw_mem_pool[i] == 0)
         {
@@ -44,9 +44,9 @@ static void *canraw_pcb_malloc(void)
 
 static void canraw_pcb_free(void *mem)
 {
-    uint16_t idx;
+    size_t idx;
 
-    uint8_t addr;
+    size_t addr;
 
     /* Checking an address for inclusion in a memory pool */
     if (mem == NULL || (uint8_t *)mem < CANRAW_MEM_POOL_BEGIN_ADDR || (uint8_t *)mem > CANRAW_MEM_POOL_END_ADDR)

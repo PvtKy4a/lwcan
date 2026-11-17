@@ -11,7 +11,7 @@
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/init.h"
-#include "lwcanarch/arch.h"
+#include "lwcanarch/system_arch.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -44,8 +44,10 @@ static void mock_timeout_handler(void *arg)
 /* Test timeout creation and execution */
 void test_timeout_basic(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout for 100ms */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x12345678);
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, (void *)(uintptr_t)0x12345678);
 
     /* timeout should not fire */
     mock_system_time_set(99);
@@ -64,10 +66,12 @@ void test_timeout_basic(void)
 /* Test multiple timeouts */
 void test_multiple_timeouts(void)
 {
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
     /* Register multiple timeouts with different delays */
-    lwcan_timeout(50, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x2);
-    lwcan_timeout(150, mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_timeout(&timeout1, 50, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 100, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout3, 150, mock_timeout_handler, (void *)(uintptr_t)0x3);
 
     /* first timeout should fire */
     mock_system_time_set(50);
@@ -94,10 +98,12 @@ void test_multiple_timeouts(void)
 /* Test timeout ordering */
 void test_timeout_ordering(void)
 {
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
     /* Register timeouts out of order */
-    lwcan_timeout(150, mock_timeout_handler, (void *)(uintptr_t)0x3);
-    lwcan_timeout(50, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout3, 150, mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_timeout(&timeout1, 50, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 100, mock_timeout_handler, (void *)(uintptr_t)0x2);
 
     /* first timeout should fire */
     mock_system_time_set(50);
@@ -124,13 +130,15 @@ void test_timeout_ordering(void)
 /* Test timeout removal */
 void test_timeout_remove(void)
 {
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
     /* Register multiple timeouts */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(200, mock_timeout_handler, (void *)(uintptr_t)0x2);
-    lwcan_timeout(300, mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_timeout(&timeout1, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 200, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout3, 300, mock_timeout_handler, (void *)(uintptr_t)0x3);
 
     /* Remove middle timeout */
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_untimeout(&timeout2);
 
     /* first timeout should fire */
     mock_system_time_set(100);
@@ -150,11 +158,14 @@ void test_timeout_remove(void)
 /* Test removing non-existent timeout */
 void test_timeout_remove_nonexistent(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     /* Try to remove a different timeout */
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x999);
+    struct lwcan_timeout other;
+    lwcan_untimeout(&other);
 
     /* original timeout should fire */
     mock_system_time_set(100);
@@ -167,15 +178,17 @@ void test_timeout_remove_nonexistent(void)
 /* Test removing all timeouts */
 void test_timeout_remove_all(void)
 {
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
     /* Register multiple timeouts */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(200, mock_timeout_handler, (void *)(uintptr_t)0x2);
-    lwcan_timeout(300, mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_timeout(&timeout1, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 200, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout3, 300, mock_timeout_handler, (void *)(uintptr_t)0x3);
 
     /* Remove all timeouts */
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x2);
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_untimeout(&timeout1);
+    lwcan_untimeout(&timeout2);
+    lwcan_untimeout(&timeout3);
 
     /* no timeouts should fire */
     mock_system_time_set(300);
@@ -184,18 +197,20 @@ void test_timeout_remove_all(void)
     TEST_ASSERT_EQUAL(0, callback_called_count);
 }
 
-/* Test removing with NULL handler */
-void test_timeout_remove_null_handler(void)
+/* Test removing with NULL timeout */
+void test_timeout_remove_null(void)
 {
     /* Should not crash when there are no timeouts */
-    lwcan_untimeout(NULL, NULL);
+    lwcan_untimeout(NULL);
 }
 
 /* Test timeout with zero delay */
 void test_timeout_zero_delay(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout with zero delay */
-    lwcan_timeout(0, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout, 0, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(1);
 
@@ -208,8 +223,10 @@ void test_timeout_zero_delay(void)
 /* Test timeout with NULL handler */
 void test_timeout_null_handler(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Should not crash with NULL handler */
-    lwcan_timeout(100, NULL, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout, 100, NULL, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(100);
 
@@ -220,8 +237,10 @@ void test_timeout_null_handler(void)
 /* Test timeout with NULL arg */
 void test_timeout_null_arg(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout with NULL arg */
-    lwcan_timeout(100, mock_timeout_handler, NULL);
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, NULL);
 
     mock_system_time_set(100);
 
@@ -230,32 +249,28 @@ void test_timeout_null_arg(void)
     TEST_ASSERT_NULL(callback_arg_value);
 }
 
-/* Test timeout exhaustion */
-void test_timeout_exhaustion(void)
+/* Test timeout with NULL timeout pointer */
+void test_timeout_null_pointer(void)
 {
-    /* Allocate all available timeouts */
-    for (uint8_t i = 0; i < LWCAN_TIMEOUTS_NUM; i++)
-    {
-        lwcan_timeout(1000, mock_timeout_handler, (void *)(uintptr_t)(i + 1));
-    }
+    /* Should not crash with NULL timeout pointer */
+    lwcan_timeout(NULL, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
-    /* Try to allocate one more - should fail gracefully */
-    lwcan_timeout(1000, mock_timeout_handler, (void *)(uintptr_t)0x999);
+    mock_system_time_set(100);
 
-    mock_system_time_set(1000);
-
+    /* Should not fire since registration failed */
     lwcan_timeouts_handler();
-    /* All valid timeouts should have fired */
-    TEST_ASSERT_EQUAL(10, callback_called_count);
+    TEST_ASSERT_EQUAL(0, callback_called_count);
 }
 
 /* Test timeout handler with multiple calls */
 void test_timeout_multiple_calls(void)
 {
-    /* Register same timeout multiple times */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
+    /* Register same timeout multiple times with different structs */
+    lwcan_timeout(&timeout1, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout3, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(100);
 
@@ -266,10 +281,12 @@ void test_timeout_multiple_calls(void)
 /* Test timeout handler ordering with same timeout values */
 void test_timeout_same_values(void)
 {
+    struct lwcan_timeout timeout1, timeout2, timeout3;
+
     /* Register timeouts with same delay */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x2);
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x3);
+    lwcan_timeout(&timeout1, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout2, 100, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout3, 100, mock_timeout_handler, (void *)(uintptr_t)0x3);
 
     mock_system_time_set(100);
 
@@ -280,15 +297,17 @@ void test_timeout_same_values(void)
 /* Test timeout after handler call */
 void test_timeout_after_handler_call(void)
 {
+    struct lwcan_timeout timeout1, timeout2;
+
     /* Register a timeout */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout1, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(100);
 
     lwcan_timeouts_handler();
     TEST_ASSERT_EQUAL(1, callback_called_count);
 
-    lwcan_timeout(50, mock_timeout_handler, (void *)(uintptr_t)0x2);
+    lwcan_timeout(&timeout2, 50, mock_timeout_handler, (void *)(uintptr_t)0x2);
 
     mock_system_time_set(150);
 
@@ -300,8 +319,10 @@ void test_timeout_after_handler_call(void)
 /* Test timeout with large delay */
 void test_timeout_large_delay(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout with large delay */
-    lwcan_timeout(0x10000, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout, 0x10000, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(1000);
 
@@ -309,14 +330,16 @@ void test_timeout_large_delay(void)
     lwcan_timeouts_handler();
     TEST_ASSERT_EQUAL(0, callback_called_count);
 
-    lwcan_untimeout(mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_untimeout(&timeout);
 }
 
 /* Test timeout handler is called only once */
 void test_timeout_called_once(void)
 {
+    struct lwcan_timeout timeout;
+
     /* Register a timeout */
-    lwcan_timeout(100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
 
     mock_system_time_set(100);
 
@@ -326,6 +349,50 @@ void test_timeout_called_once(void)
     /* Call handler again - should not be called again */
     lwcan_timeouts_handler();
     TEST_ASSERT_EQUAL(1, callback_called_count);
+}
+
+/* Test timeout reuse after firing */
+void test_timeout_reuse_after_fire(void)
+{
+    struct lwcan_timeout timeout;
+
+    /* Register a timeout */
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+
+    mock_system_time_set(100);
+
+    lwcan_timeouts_handler();
+    TEST_ASSERT_EQUAL(1, callback_called_count);
+
+    /* Reuse the same timeout struct */
+    lwcan_timeout(&timeout, 50, mock_timeout_handler, (void *)(uintptr_t)0x2);
+
+    mock_system_time_set(150);
+
+    lwcan_timeouts_handler();
+    TEST_ASSERT_EQUAL(2, callback_called_count);
+    TEST_ASSERT_EQUAL((void *)(uintptr_t)0x2, callback_arg_value);
+}
+
+/* Test timeout reuse after removal */
+void test_timeout_reuse_after_remove(void)
+{
+    struct lwcan_timeout timeout;
+
+    /* Register a timeout */
+    lwcan_timeout(&timeout, 100, mock_timeout_handler, (void *)(uintptr_t)0x1);
+
+    /* Remove before it fires */
+    lwcan_untimeout(&timeout);
+
+    /* Reuse the same timeout struct */
+    lwcan_timeout(&timeout, 50, mock_timeout_handler, (void *)(uintptr_t)0x2);
+
+    mock_system_time_set(50);
+
+    lwcan_timeouts_handler();
+    TEST_ASSERT_EQUAL(1, callback_called_count);
+    TEST_ASSERT_EQUAL((void *)(uintptr_t)0x2, callback_arg_value);
 }
 
 int main(void)
@@ -344,7 +411,7 @@ int main(void)
 
     RUN_TEST(test_timeout_remove_all);
 
-    RUN_TEST(test_timeout_remove_null_handler);
+    RUN_TEST(test_timeout_remove_null);
 
     RUN_TEST(test_timeout_zero_delay);
 
@@ -352,7 +419,7 @@ int main(void)
 
     RUN_TEST(test_timeout_null_arg);
 
-    RUN_TEST(test_timeout_exhaustion);
+    RUN_TEST(test_timeout_null_pointer);
 
     RUN_TEST(test_timeout_multiple_calls);
 
@@ -363,6 +430,10 @@ int main(void)
     RUN_TEST(test_timeout_large_delay);
 
     RUN_TEST(test_timeout_called_once);
+
+    RUN_TEST(test_timeout_reuse_after_fire);
+
+    RUN_TEST(test_timeout_reuse_after_remove);
 
     return UNITY_END();
 }

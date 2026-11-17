@@ -11,7 +11,7 @@
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/init.h"
-#include "lwcanarch/arch.h"
+#include "lwcanarch/system_arch.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -72,23 +72,21 @@ void test_isotp_new_remove(void)
 {
     struct isotp_pcb *pcbs[ISOTP_MAX_PCB_NUM];
     struct isotp_pcb *pcb;
-    lwcanerr_t err;
-    struct addr_can addr;
 
     /* Test successful PCB creation */
-    pcbs[0] = isotp_new();
-    TEST_ASSERT_NOT_NULL(pcbs[0]);
+    pcb = isotp_new();
+    TEST_ASSERT_NOT_NULL(pcb);
 
     /* Test successful PCB removal */
-    isotp_remove(pcbs[0]);
+    isotp_remove(pcb);
 
     /* Remove NULL pointer (should be safe) */
     isotp_remove(NULL); /* Should not crash */
 
     /* Test PCB creation after removal */
-    pcbs[0] = isotp_new();
-    TEST_ASSERT_NOT_NULL(pcbs[0]);
-    isotp_remove(pcbs[0]);
+    pcb = isotp_new();
+    TEST_ASSERT_NOT_NULL(pcb);
+    isotp_remove(pcb);
 
     /* Test PCB maximum */
     for (uint8_t i = 0; i < ISOTP_MAX_PCB_NUM; i++)
@@ -100,7 +98,6 @@ void test_isotp_new_remove(void)
     /* Test PCB creation when max number reached */
     pcb = isotp_new();
     TEST_ASSERT_NULL(pcb);
-    isotp_remove(pcb);
 
     /* Cleanup */
     for (uint8_t i = 0; i < ISOTP_MAX_PCB_NUM; i++)
@@ -116,9 +113,10 @@ void test_isotp_bind(void)
     lwcanerr_t err;
     struct addr_can addr;
 
-    /* Test successful bind with SFF */
     pcb = isotp_new();
     TEST_ASSERT_NOT_NULL(pcb);
+
+    /* Test successful bind with SFF */
     addr.can_ifindex = 1;
     addr.can_addr.tp.tx_id = 0x7E0;
     addr.can_addr.tp.rx_id = 0x7E8;
@@ -129,8 +127,6 @@ void test_isotp_bind(void)
     TEST_ASSERT_EQUAL(addr.can_addr.tp.rx_id, pcb->rx_id);
 
     /* Test successful bind with EFF */
-    pcb = isotp_new();
-    TEST_ASSERT_NOT_NULL(pcb);
     addr.can_ifindex = 1;
     addr.can_addr.tp.tx_id = 0x18F00102 | CAN_EFF_FLAG;
     addr.can_addr.tp.rx_id = 0x18F00201 | CAN_EFF_FLAG;
@@ -332,6 +328,9 @@ void test_isotp_fill_sf(void)
     flow->buffer = buffer;
     flow->remaining_data = sizeof(data);
 
+    /* Initialize frame */
+    memset(&frame, 0, sizeof(frame));
+
     /* Fill single frame */
     isotp_fill_sf(flow, &frame);
 
@@ -393,6 +392,9 @@ void test_isotp_fill_ff(void)
     flow->buffer = buffer;
     flow->remaining_data = sizeof(data);
 
+    /* Initialize frame */
+    memset(&frame, 0, sizeof(frame));
+
     /* Fill first frame */
     isotp_fill_ff(flow, &frame);
 
@@ -453,6 +455,9 @@ void test_isotp_fill_cf(void)
     flow->remaining_data = sizeof(data);
     flow->cf_sn = 1;
 
+    /* Initialize frame */
+    memset(&frame, 0, sizeof(frame));
+
     /* Fill consecutive frame */
     isotp_fill_cf(flow, &frame);
 
@@ -479,6 +484,9 @@ void test_isotp_fill_cf(void)
 
     /* Setup next sequence number */
     flow->cf_sn = 2;
+
+    /* Initialize frame */
+    memset(&frame, 0, sizeof(frame));
 
     /* Fill consecutive frame */
     isotp_fill_cf(flow, &frame);
@@ -526,6 +534,9 @@ void test_isotp_fill_fc(void)
     flow->bs = 0;
     flow->st = 0;
 
+    /* Initialize frame */
+    memset(&frame, 0, sizeof(frame));
+
     /* Fill flow control frame */
     isotp_fill_fc(flow, &frame);
 
@@ -561,10 +572,12 @@ void test_isotp_get_sf_dl(void)
 #if !ISOTP_CANFD
     uint8_t frame_data[8];
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = SF;
     frame_data[SF_DL_OFFSET] |= (0x04 & SF_DL_MASK); /* DL = 4 */
     TEST_ASSERT_EQUAL(4, isotp_get_sf_dl(frame_data));
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = SF;
     frame_data[SF_DL_OFFSET] |= (0x08 & SF_DL_MASK); /* DL = 8 */
     TEST_ASSERT_EQUAL(8, isotp_get_sf_dl(frame_data));
@@ -578,21 +591,25 @@ void test_isotp_get_ff_dl(void)
 #if !ISOTP_CANFD
     uint8_t frame_data[8];
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = FF;
     frame_data[FF_DL_HI_OFFSET] = (0x00 & FF_DL_HI_MASK); /* DL hi = 0 */
-    frame_data[FF_DL_LO_OFFSET] = 0x4; /* DL lo = 4 */
+    frame_data[FF_DL_LO_OFFSET] = 0x04; /* DL lo = 4 */
     TEST_ASSERT_EQUAL(4, isotp_get_ff_dl(frame_data));
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = FF;
     frame_data[FF_DL_HI_OFFSET] = (0x00 & FF_DL_HI_MASK); /* DL hi = 0 */
-    frame_data[FF_DL_LO_OFFSET] = 0x8; /* DL lo = 8 */
+    frame_data[FF_DL_LO_OFFSET] = 0x08; /* DL lo = 8 */
     TEST_ASSERT_EQUAL(8, isotp_get_ff_dl(frame_data));
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = FF;
     frame_data[FF_DL_HI_OFFSET] = (0x00 & FF_DL_HI_MASK); /* DL hi = 0 */
     frame_data[FF_DL_LO_OFFSET] = 0x14; /* DL lo = 20 */
     TEST_ASSERT_EQUAL(20, isotp_get_ff_dl(frame_data));
 
+    memset(frame_data, 0, sizeof(frame_data));
     frame_data[FRAME_TYPE_OFFSET] = FF;
     frame_data[FF_DL_HI_OFFSET] = (0x01 & FF_DL_HI_MASK); /* DL hi = 1 */
     frame_data[FF_DL_LO_OFFSET] = 0x00; /* DL lo = 0 */
@@ -655,18 +672,17 @@ void test_isotp_remove_buffer(void)
     isotp_remove(pcb);
 }
 
+/* Test ISOTP remove buffer with NULL arguments */
 void test_isotp_remove_buffer_null_args(void)
 {
     struct isotp_flow flow;
     struct lwcan_buffer buffer;
 
-    /* Test with NULL flow */
+    /* Test with NULL flow - assert is no-op in test environment */
     isotp_remove_buffer(NULL, &buffer);
-    TEST_IGNORE_MESSAGE("NULL flow test - should not crash");
 
-    /* Test with NULL buffer */
+    /* Test with NULL buffer - returns silently */
     isotp_remove_buffer(&flow, NULL);
-    TEST_IGNORE_MESSAGE("NULL buffer test - should not crash");
 }
 
 /* Test ISOTP timeout error handler */
@@ -708,9 +724,8 @@ void test_isotp_timeout_error_handler_output_flow(void)
     /* Verify error callback was called */
     TEST_ASSERT_EQUAL(1, mock_error_called);
 
-    /* Cleanup */
+    /* Cleanup - buffer was already deleted by isotp_timeout_error_handler */
     isotp_remove(pcb);
-    lwcan_buffer_delete(buffer);
 }
 
 void test_isotp_timeout_error_handler_input_flow(void)
@@ -750,16 +765,15 @@ void test_isotp_timeout_error_handler_input_flow(void)
     /* Verify error callback was called */
     TEST_ASSERT_EQUAL(1, mock_error_called);
 
-    /* Cleanup */
+    /* Cleanup - buffer was already deleted by isotp_timeout_error_handler */
     isotp_remove(pcb);
-    lwcan_buffer_delete(buffer);
 }
 
+/* Test ISOTP timeout error handler with NULL arg */
 void test_isotp_timeout_error_handler_null_arg(void)
 {
-    /* Test with NULL arg - should not crash */
+    /* Test with NULL arg - assert is no-op in test environment */
     isotp_timeout_error_handler(NULL);
-    TEST_IGNORE_MESSAGE("NULL arg test - should not crash");
 }
 
 /* Test ISOTP state enumeration */

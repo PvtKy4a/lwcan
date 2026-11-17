@@ -42,7 +42,7 @@ static const uint8_t padding_length[] = {
 
 static void *isotp_pcb_malloc(void)
 {
-    for (uint16_t i = ISOTP_MEM_POOL_SERVICE_BEGIN_IDX; i <= ISOTP_MEM_POOL_SERVICE_END_IDX; i++)
+    for (size_t i = ISOTP_MEM_POOL_SERVICE_BEGIN_IDX; i <= ISOTP_MEM_POOL_SERVICE_END_IDX; i++)
     {
         if (isotp_mem_pool[i] == 0)
         {
@@ -57,9 +57,9 @@ static void *isotp_pcb_malloc(void)
 
 static void isotp_pcb_free(void *mem)
 {
-    uint16_t idx;
+    size_t idx;
 
-    uint8_t addr;
+    size_t addr;
 
     /* Checking an address for inclusion in a memory pool */
     if (mem == NULL || (uint8_t *)mem < ISOTP_MEM_POOL_BEGIN_ADDR || (uint8_t *)mem > ISOTP_MEM_POOL_END_ADDR)

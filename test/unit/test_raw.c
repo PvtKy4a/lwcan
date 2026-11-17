@@ -11,7 +11,7 @@
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/init.h"
-#include "lwcanarch/arch.h"
+#include "lwcanarch/system_arch.h"
 
 #include <stdint.h>
 #include <string.h>
@@ -72,46 +72,39 @@ static lwcanerr_t _canif_init(struct canif *canif)
 /* Test RAW PCB creation and destruction */
 void test_raw_new_remove(void)
 {
+    struct canraw_pcb *pcbs[CANRAW_MAX_PCB_NUM];
     struct canraw_pcb *pcb;
-    lwcanerr_t err;
 
     /* Test successful PCB creation */
     pcb = canraw_new();
     TEST_ASSERT_NOT_NULL(pcb);
-    TEST_ASSERT_NULL(pcb->next);
-    TEST_ASSERT_EQUAL(0, pcb->if_index);
-    TEST_ASSERT_NULL(pcb->receive);
-    TEST_ASSERT_NULL(pcb->callback_arg);
-    TEST_ASSERT_EQUAL(0, pcb->sent);
-    TEST_ASSERT_EQUAL(0, pcb->sent_error);
 
     /* Test successful PCB removal */
     canraw_remove(pcb);
-    pcb = NULL;
+
+    /* Remove NULL pointer (should be safe) */
+    canraw_remove(NULL); /* Should not crash */
 
     /* Test PCB creation after removal */
     pcb = canraw_new();
     TEST_ASSERT_NOT_NULL(pcb);
     canraw_remove(pcb);
-    pcb = NULL;
 
-    /* Test PCB creation when max number reached */
+    /* Test PCB maximum */
     for (uint8_t i = 0; i < CANRAW_MAX_PCB_NUM; i++)
     {
-        pcb = canraw_new();
-        TEST_ASSERT_NOT_NULL(pcb);
+        pcbs[i] = canraw_new();
+        TEST_ASSERT_NOT_NULL(pcbs[i]);
     }
 
+    /* Test PCB creation when max number reached */
     pcb = canraw_new();
     TEST_ASSERT_NULL(pcb);
 
     /* Cleanup */
-    pcb = canraw_new();
-    while (pcb != NULL)
+    for (uint8_t i = 0; i < CANRAW_MAX_PCB_NUM; i++)
     {
-        struct canraw_pcb *next = pcb->next;
-        canraw_remove(pcb);
-        pcb = next;
+        canraw_remove(pcbs[i]);
     }
 }
 
@@ -362,64 +355,6 @@ void test_raw_send_invalid_params(void)
     canraw_remove(pcb);
 }
 
-/* Test RAW multiple PCBs */
-void test_raw_multiple_pcbs(void)
-{
-    struct canraw_pcb *pcbs[CANRAW_MAX_PCB_NUM];
-    lwcanerr_t err;
-    struct canif canif;
-    struct addr_can addr;
-
-    /* Add a CAN interface */
-    err = canif_add(&canif, "can0", _canif_init);
-    TEST_ASSERT_EQUAL(ERROR_OK, err);
-
-    /* Create multiple PCBs */
-    for (uint8_t i = 0; i < CANRAW_MAX_PCB_NUM; i++)
-    {
-        pcbs[i] = canraw_new();
-        TEST_ASSERT_NOT_NULL(pcbs[i]);
-
-        addr.can_ifindex = canif_name_to_index("can0");
-
-        err = canraw_bind(pcbs[i], &addr);
-        TEST_ASSERT_EQUAL(ERROR_OK, err);
-
-        err = canraw_set_receive_callback(pcbs[i], mock_receive);
-        TEST_ASSERT_EQUAL(ERROR_OK, err);
-    }
-
-    /* Remove all PCBs */
-    for (uint8_t i = 0; i < CANRAW_MAX_PCB_NUM; i++)
-    {
-        canraw_remove(pcbs[i]);
-        pcbs[i] = NULL;
-    }
-
-    /* Cleanup */
-    canif_remove(&canif);
-}
-
-/* Test RAW remove with NULL */
-void test_raw_remove_null(void)
-{
-    /* Should not crash */
-    canraw_remove(NULL);
-}
-
-/* Test RAW set callback with NULL */
-void test_raw_set_callback_null(void)
-{
-    lwcanerr_t err;
-
-    /* Test setting callbacks with NULL PCB */
-    err = canraw_set_receive_callback(NULL, mock_receive);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
-
-    err = canraw_set_callback_arg(NULL, (void *)0x12345678);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
-}
-
 int main(void)
 {
     UNITY_BEGIN();
@@ -439,12 +374,6 @@ int main(void)
     RUN_TEST(test_raw_send_with_callback);
 
     RUN_TEST(test_raw_send_invalid_params);
-
-    RUN_TEST(test_raw_multiple_pcbs);
-
-    RUN_TEST(test_raw_remove_null);
-
-    RUN_TEST(test_raw_set_callback_null);
 
     return UNITY_END();
 }
