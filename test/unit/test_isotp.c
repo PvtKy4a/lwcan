@@ -112,12 +112,17 @@ void test_isotp_bind(void)
     struct isotp_pcb *pcb;
     lwcanerr_t err;
     struct addr_can addr;
+    struct canif canif;
+
+    /* Add a CAN interface */
+    err = canif_add(&canif, "can0", _canif_init);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 
     pcb = isotp_new();
     TEST_ASSERT_NOT_NULL(pcb);
 
     /* Test successful bind with SFF */
-    addr.can_ifindex = 1;
+    addr.can_ifindex = canif_name_to_index("can0");
     addr.can_addr.tp.tx_id = 0x7E0;
     addr.can_addr.tp.rx_id = 0x7E8;
     err = isotp_bind(pcb, &addr);
@@ -127,7 +132,7 @@ void test_isotp_bind(void)
     TEST_ASSERT_EQUAL(addr.can_addr.tp.rx_id, pcb->rx_id);
 
     /* Test successful bind with EFF */
-    addr.can_ifindex = 1;
+    addr.can_ifindex = canif_name_to_index("can0");
     addr.can_addr.tp.tx_id = 0x18F00102 | CAN_EFF_FLAG;
     addr.can_addr.tp.rx_id = 0x18F00201 | CAN_EFF_FLAG;
     err = isotp_bind(pcb, &addr);
@@ -150,14 +155,14 @@ void test_isotp_bind(void)
     TEST_ASSERT_EQUAL(ERROR_CANIF, err);
 
     /* Test bind with invalid tx_id EFF */
-    addr.can_ifindex = 1;
+    addr.can_ifindex = canif_name_to_index("can0");
     addr.can_addr.tp.tx_id = 0x18F00102; /* EFF without EFF flag */
     addr.can_addr.tp.rx_id = 0x7E8;
     err = isotp_bind(pcb, &addr);
     TEST_ASSERT_EQUAL(ERROR_ARG, err);
 
     /* Test bind with invalid rx_id EFF */
-    addr.can_ifindex = 1;
+    addr.can_ifindex = canif_name_to_index("can0");
     addr.can_addr.tp.tx_id = 0x7E0;
     addr.can_addr.tp.rx_id = 0x18F00201; /* EFF without EFF flag */
     err = isotp_bind(pcb, &addr);

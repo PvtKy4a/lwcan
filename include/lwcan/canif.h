@@ -33,7 +33,7 @@ struct canif
 
     void *driver_data;
 
-    char name[4];
+    const char *name;
 
     canif_input_function input;
 

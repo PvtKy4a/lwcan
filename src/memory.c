@@ -173,25 +173,6 @@ void *lwcan_malloc(size_t size)
 }
 /*-----------------------------------------------------------*/
 
-void *lwcan_calloc(size_t number, size_t size)
-{
-    void *mem;
-
-    uint32_t num;
-    
-    num = number * size;
-    
-    mem = lwcan_malloc(num);
-
-    if (mem != NULL)
-    {
-        memset(mem, 0, num);
-    }
-
-    return mem;
-}
-/*-----------------------------------------------------------*/
-
 void lwcan_free(void *p)
 {
     uint8_t *puc = (uint8_t *)p;

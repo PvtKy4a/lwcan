@@ -23,7 +23,6 @@ static void sent_sf(struct isotp_pcb *pcb)
     {
         pcb->sent(pcb->callback_arg, pcb, length);
     }
-    
 }
 
 static void sent_ff(struct isotp_pcb *pcb)
@@ -121,6 +120,8 @@ void isotp_sent(void *arg, lwcanerr_t error)
         {
             flow->pcb->error(flow->pcb->callback_arg, error);
         }
+
+        return;
     }
 
     switch (flow->state)
@@ -174,12 +175,14 @@ void isotp_output(void *arg)
 
     canif = canif_get_by_index(pcb->if_index);
 
-    if (canif == NULL)
+    if (canif == NULL || canif->output == NULL)
     {
-        LWCAN_ASSERT("canif != NULL", canif != NULL);
+        ret = ERROR_CANIF;
 
-        return;
+        goto error;
     }
+
+    memset(&frame, 0, sizeof(frame));
 
     frame.can_id = pcb->tx_id;
 
@@ -223,6 +226,7 @@ void isotp_output(void *arg)
         return;
     }
 
+error:
     isotp_remove_buffer(flow, flow->buffer);
 
     flow->state = ISOTP_IDLE;
@@ -241,7 +245,6 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
     {
         LWCAN_ASSERT("pcb != NULL", pcb != NULL);
         LWCAN_ASSERT("data != NULL", data != NULL);
-        LWCAN_ASSERT("length != 0", length != 0);
 
         return ERROR_ARG;
     }
@@ -249,6 +252,18 @@ lwcanerr_t isotp_send(struct isotp_pcb *pcb, const uint8_t *data, uint32_t lengt
     if (pcb->output_flow.state != ISOTP_IDLE)
     {
         return ERROR_INPROGRESS;
+    }
+
+#if !ISOTP_CANFD
+    if (length > 4095)
+    {
+        return ERROR_ARG;
+    }
+#endif
+
+    if (length > LWCAN_MEM_SIZE)
+    {
+        return ERROR_MEMORY;
     }
 
     buffer = lwcan_buffer_new(length);

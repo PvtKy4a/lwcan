@@ -80,10 +80,10 @@ void test_canif_add(void)
     /* Test successful add */
     err = canif_add(&canif, "can0", mock_init);
     TEST_ASSERT_EQUAL(ERROR_OK, err);
-    TEST_ASSERT_EQUAL_MEMORY("can0", canif.name, 4);
 
     /* Cleanup */
-    canif_remove(&canif);
+    err = canif_remove(&canif);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 }
 
 /* Test CANIF add with NULL canif */
@@ -112,16 +112,6 @@ void test_canif_add_empty_name(void)
     lwcanerr_t err;
 
     err = canif_add(&canif, "", mock_init);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
-}
-
-/* Test CANIF add with name too long */
-void test_canif_add_name_too_long(void)
-{
-    struct canif canif;
-    lwcanerr_t err;
-
-    err = canif_add(&canif, "can0123", mock_init);
     TEST_ASSERT_EQUAL(ERROR_ARG, err);
 }
 
@@ -467,8 +457,6 @@ int main(void)
     RUN_TEST(test_canif_add_null_name);
 
     RUN_TEST(test_canif_add_empty_name);
-
-    RUN_TEST(test_canif_add_name_too_long);
 
     RUN_TEST(test_canif_add_null_init);
 

@@ -6,6 +6,26 @@
 
 #include <string.h>
 
+static int buffer_valid(const struct lwcan_buffer *buffer, uint32_t offset, uint32_t length)
+{
+    if (buffer == NULL || buffer->payload == NULL)
+    {
+        return 0;
+    }
+
+    if (offset > buffer->length)
+    {
+        return 0;
+    }
+
+    if (length > (buffer->length - offset))
+    {
+        return 0;
+    }
+
+    return 1;
+}
+
 struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 {
     struct lwcan_buffer *buffer;
@@ -38,6 +58,11 @@ struct lwcan_buffer *lwcan_buffer_new(uint32_t length)
 
 void lwcan_buffer_delete(struct lwcan_buffer *buffer)
 {
+    if (buffer == NULL)
+    {
+        return;
+    }
+
     lwcan_free(buffer->payload);
 
     lwcan_free(buffer);
@@ -45,13 +70,14 @@ void lwcan_buffer_delete(struct lwcan_buffer *buffer)
 
 lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length)
 {
-    if (buffer == NULL || source == NULL || length == 0)
+    if (source == NULL || !buffer_valid(buffer, 0, length))
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-        LWCAN_ASSERT("source != NULL", source != NULL);
-        LWCAN_ASSERT("length != 0", length != 0);
-
         return ERROR_ARG;
+    }
+
+    if (length == 0)
+    {
+        return ERROR_OK;
     }
 
     memcpy(buffer->payload, source, length);
@@ -61,13 +87,14 @@ lwcanerr_t lwcan_buffer_copy_to(struct lwcan_buffer *buffer, const uint8_t *sour
 
 lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_t *source, uint32_t length, uint32_t offset)
 {
-    if (buffer == NULL || source == NULL || length == 0)
+    if (source == NULL || !buffer_valid(buffer, offset, length))
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-        LWCAN_ASSERT("source != NULL", source != NULL);
-        LWCAN_ASSERT("length != 0", length != 0);
-
         return ERROR_ARG;
+    }
+
+    if (length == 0)
+    {
+        return ERROR_OK;
     }
 
     memcpy(buffer->payload + offset, source, length);
@@ -75,34 +102,36 @@ lwcanerr_t lwcan_buffer_copy_to_offset(struct lwcan_buffer *buffer, const uint8_
     return ERROR_OK;
 }
 
-lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length)
+lwcanerr_t lwcan_buffer_copy_from(struct lwcan_buffer *buffer, uint8_t *destination, uint32_t length)
 {
-    if (buffer == NULL || distination == NULL || length == 0)
+    if (destination == NULL || !buffer_valid(buffer, 0, length))
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-        LWCAN_ASSERT("distination != NULL", distination != NULL);
-        LWCAN_ASSERT("length != 0", length != 0);
-
         return ERROR_ARG;
     }
 
-    memcpy(distination, buffer->payload, length);
+    if (length == 0)
+    {
+        return ERROR_OK;
+    }
+
+    memcpy(destination, buffer->payload, length);
 
     return ERROR_OK;
 }
 
-lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *distination, uint32_t length, uint32_t offset)
+lwcanerr_t lwcan_buffer_copy_from_offset(struct lwcan_buffer *buffer, uint8_t *destination, uint32_t length, uint32_t offset)
 {
-    if (buffer == NULL || distination == NULL || length == 0)
+    if (destination == NULL || !buffer_valid(buffer, offset, length))
     {
-        LWCAN_ASSERT("buffer != NULL", buffer != NULL);
-        LWCAN_ASSERT("distination != NULL", distination != NULL);
-        LWCAN_ASSERT("length != 0", length != 0);
-
         return ERROR_ARG;
     }
 
-    memcpy(distination, buffer->payload + offset, length);
+    if (length == 0)
+    {
+        return ERROR_OK;
+    }
+
+    memcpy(destination, buffer->payload + offset, length);
 
     return ERROR_OK;
 }

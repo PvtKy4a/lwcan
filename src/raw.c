@@ -4,7 +4,7 @@
 
 #include "lwcan/raw.h"
 #include "lwcan/private/raw_private.h"
-#include "lwcan/timeouts.h"
+#include "lwcan/system.h"
 #include "lwcan/debug.h"
 
 #include <string.h>
@@ -112,10 +112,8 @@ lwcanerr_t canraw_bind(struct canraw_pcb *pcb, struct addr_can *addr)
         return ERROR_ARG;
     }
 
-    if (addr->can_ifindex == 0)
+    if (addr->can_ifindex == 0 || canif_get_by_index(addr->can_ifindex) == NULL)
     {
-        LWCAN_ASSERT("addr->can_ifindex != 0", addr->can_ifindex != 0);
-
         return ERROR_CANIF;
     }
 
@@ -223,6 +221,8 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, 
 
     lwcanerr_t ret;
 
+    uint32_t start_time;
+
     if (pcb == NULL || frame == NULL)
     {
         LWCAN_ASSERT("pcb != NULL", pcb != NULL);
@@ -249,6 +249,8 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, 
         goto exit;
     }
 
+    pcb->sent = 0;
+
     ret = canif->output(canif, frame, frame_size, timeout, raw_sent, pcb);
 
     if (ret != ERROR_OK)
@@ -256,8 +258,19 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, 
         goto exit;
     }
 
+    start_time = system_now();
+
     while (!pcb->sent)
     {
+        if ((system_now() - start_time) > (timeout + 1))
+        {
+            pcb->sent_error = ERROR_TRANSMIT_TIMEOUT;
+
+            break;
+        }
+#if !LWCAN_NO_SYSTEM
+        system_msleep(1);
+#endif
     }
 
     pcb->sent = 0;

@@ -79,9 +79,9 @@ static void connect_try(void *arg)
 
     if (!uds_state.is_connected && uds_state.connect_try_num == 0)
     {
-        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
-
         uds_state.state = UDS_IDLE;
+
+        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
 
         return;
     }
@@ -97,9 +97,9 @@ static void connect_try(void *arg)
 
     if (ret != ERROR_OK)
     {
-        uds_state.connect_cb(uds_state.connect_cb_arg, ret);
-
         uds_state.state = UDS_IDLE;
+
+        uds_state.connect_cb(uds_state.connect_cb_arg, ret);
     }
 }
 
@@ -147,33 +147,33 @@ static void p2_timer_handler(void *arg)
         return;
     }
 
+    uds_state.state = UDS_IDLE;
+
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
     }
-
-    uds_state.state = UDS_IDLE;
 }
 
 static void p2_star_timer_handler(void *arg)
 {
     (void)arg;
 
+    uds_state.state = UDS_IDLE;
+
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, ERROR_RECEIVE_TIMEOUT);
     }
-
-    uds_state.state = UDS_IDLE;
 }
 
 static void handle_negative_response(struct lwcan_buffer *buffer)
 {
     if (uds_state.state == UDS_CONNECTING)
     {
-        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
-
         uds_state.state = UDS_IDLE;
+
+        uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
 
         return;
     }
@@ -190,33 +190,33 @@ static void handle_negative_response(struct lwcan_buffer *buffer)
         return;
     }
 
+    uds_state.state = UDS_IDLE;
+
     if (uds_state.context != NULL && uds_state.context->negative_response != NULL)
     {
         uds_state.context->negative_response(uds_state.handle, buffer->payload[UDS_REJECTED_SID_OFFSET], buffer->payload[UDS_NRC_OFFSET]);
     }
-
-    uds_state.state = UDS_IDLE;
 }
 
 static void handle_positive_response(struct lwcan_buffer *buffer)
 {
     if (uds_state.state == UDS_CONNECTING)
     {
+        uds_state.state = UDS_IDLE;
+
         uds_state.is_connected = 1;
 
         uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_OK);
 
-        uds_state.state = UDS_IDLE;
-
         return;
     }
+
+    uds_state.state = UDS_IDLE;
 
     if (uds_state.context != NULL && uds_state.context->positive_response != NULL)
     {
         uds_state.context->positive_response(uds_state.handle, buffer->payload, buffer->length);
     }
-
-    uds_state.state = UDS_IDLE;
 }
 
 static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buffer *buffer)
@@ -246,7 +246,28 @@ static void uds_receive(void *arg, struct isotp_pcb *isotp_pcb, struct lwcan_buf
 
     if (buffer->payload[UDS_SID_OFFSET] == UDS_NEGATIVE_RESPONSE_SID)
     {
-        handle_negative_response(buffer);
+        if (buffer->length != 3)
+        {
+            if (uds_state.state == UDS_CONNECTING)
+            {
+                uds_state.state = UDS_IDLE;
+
+                uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
+            }
+            else
+            {
+                uds_state.state = UDS_IDLE;
+
+                if (uds_state.context != NULL && uds_state.context->error != NULL)
+                {
+                    uds_state.context->error(uds_state.handle, ERROR_ABORTED);
+                }
+            }
+        }
+        else
+        {
+            handle_negative_response(buffer);
+        }
     }
     else
     {
@@ -323,12 +344,12 @@ static void uds_error(void *arg, lwcanerr_t error)
         break;
     }
 
+    uds_state.state = UDS_IDLE;
+
     if (uds_state.context != NULL && uds_state.context->error != NULL)
     {
         uds_state.context->error(uds_state.handle, error);
     }
-
-    uds_state.state = UDS_IDLE;
 }
 
 static void uds_sent(void *arg, struct isotp_pcb *pcb, uint32_t length)
@@ -407,12 +428,19 @@ lwcanerr_t uds_client_init(void)
  */
 lwcanerr_t uds_client_deinit(void)
 {
+    lwcanerr_t ret;
+
     if (uds_state.state != UDS_IDLE)
     {
         return ERROR_INPROGRESS;
     }
 
-    isotp_remove(uds_state.isotp_pcb);
+    ret = isotp_remove(uds_state.isotp_pcb);
+
+    if (ret != ERROR_OK)
+    {
+        return ret;
+    }
 
     if (uds_state.is_connected)
     {
@@ -560,6 +588,8 @@ lwcanerr_t uds_set_p2_star_timer(uint32_t time)
  */
 lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_response)
 {
+    lwcanerr_t err;
+
     if (request == NULL || size == 0)
     {
         return ERROR_ARG;
@@ -579,7 +609,14 @@ lwcanerr_t uds_send_request(const void *request, uint32_t size, uint8_t with_res
 
     uds_state.state = UDS_SENDING_REQUEST;
 
-    return isotp_send(uds_state.isotp_pcb, request, size);
+    err = isotp_send(uds_state.isotp_pcb, request, size);
+
+    if (err != ERROR_OK)
+    {
+        uds_state.state = UDS_IDLE;
+    }
+
+    return err;
 }
 
 #endif

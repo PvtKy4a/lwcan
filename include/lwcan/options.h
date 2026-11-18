@@ -44,6 +44,13 @@ extern "C"
 #endif
 
 /*
+ *  Use padding messages with ISOTP_PADDING_BYTE.
+ */
+#if !defined ISOTP_USE_PADDING
+#define ISOTP_USE_PADDING           1
+#endif
+
+/*
  *  A byte used to pad messages to prevent bit stuffing
  */
 #if !defined ISOTP_PADDING_BYTE

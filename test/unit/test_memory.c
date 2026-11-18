@@ -36,21 +36,10 @@ void test_memory_basic_allocation(void)
     TEST_ASSERT_NOT_NULL(ptr);
     lwcan_free(ptr);
 
-    /* Test that allocated memory is zero-initialized by calloc */
-    ptr = lwcan_calloc(1, 64);
-    TEST_ASSERT_NOT_NULL(ptr);
-
-    uint8_t *data = (uint8_t *)ptr;
-    for (int i = 0; i < 64; i++)
-    {
-        TEST_ASSERT_EQUAL(0, data[i]);
-    }
-
-    lwcan_free(ptr);
-
     /* Test allocation of exactly available memory */
     ptr = lwcan_malloc(LWCAN_MEM_SIZE);
     TEST_ASSERT_NULL(ptr); /* Should fail due to heap structure overhead */
+    lwcan_free(ptr);
 }
 
 /* Test multiple allocations */
@@ -213,45 +202,6 @@ void test_memory_pool_exhaustion(void)
     }
 }
 
-/* Test calloc functionality */
-void test_calloc_initialization(void)
-{
-    void *ptr;
-    uint8_t *data;
-    int i;
-
-    ptr = lwcan_calloc(10, 8); /* 80 bytes */
-    TEST_ASSERT_NOT_NULL(ptr);
-
-    data = (uint8_t *)ptr;
-
-    /* Verify all bytes are zero */
-    for (i = 0; i < 80; i++)
-    {
-        TEST_ASSERT_EQUAL(0, data[i]);
-    }
-
-    /* Write pattern and verify */
-    for (i = 0; i < 80; i++)
-    {
-        data[i] = (uint8_t)(i & 0xFF);
-    }
-
-    /* Free and reallocate - should be zero again */
-    lwcan_free(ptr);
-
-    ptr = lwcan_calloc(1, 80);
-    TEST_ASSERT_NOT_NULL(ptr);
-
-    data = (uint8_t *)ptr;
-    for (i = 0; i < 80; i++)
-    {
-        TEST_ASSERT_EQUAL(0, data[i]);
-    }
-
-    lwcan_free(ptr);
-}
-
 int main(void)
 {
     UNITY_BEGIN();
@@ -269,8 +219,6 @@ int main(void)
     RUN_TEST(test_memory_alignment);
 
     RUN_TEST(test_memory_pool_exhaustion);
-
-    RUN_TEST(test_calloc_initialization);
 
     return UNITY_END();
 }

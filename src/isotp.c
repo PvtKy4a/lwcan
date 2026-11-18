@@ -130,10 +130,8 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
         return ERROR_ARG;
     }
 
-    if (addr->can_ifindex == 0)
+    if (addr->can_ifindex == 0 || canif_get_by_index(addr->can_ifindex) == NULL)
     {
-        LWCAN_ASSERT("addr->can_ifindex != 0", addr->can_ifindex != 0);
-
         return ERROR_CANIF;
     }
 
@@ -176,40 +174,77 @@ lwcanerr_t isotp_bind(struct isotp_pcb *pcb, const struct addr_can *addr)
     return ERROR_OK;
 }
 
-void isotp_remove(struct isotp_pcb *pcb)
+lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
 {
-    struct isotp_pcb *pcb_temp;
+    struct isotp_pcb *item, *previous = NULL;
+
+    struct lwcan_buffer *buffer;
 
     if (pcb == NULL)
     {
-        return;
+        return ERROR_ARG;
     }
 
-    if (isotp_pcb_list == pcb)
+    if (pcb->input_flow.state != ISOTP_IDLE || pcb->output_flow.state != ISOTP_IDLE)
+    {
+        return ERROR_INPROGRESS;
+    }
+
+    for (item = isotp_pcb_list; item != NULL; item = item->next)
+    {
+        if (item == pcb)
+        {
+            break;
+        }
+
+        previous = item;
+    }
+
+    if (item == NULL)
+    {
+        return ERROR_ARG;
+    }
+
+    lwcan_untimeout(&pcb->input_flow.output_timeout);
+    lwcan_untimeout(&pcb->input_flow.error_timeout);
+
+    lwcan_untimeout(&pcb->output_flow.output_timeout);
+    lwcan_untimeout(&pcb->output_flow.error_timeout);
+
+    while (pcb->input_flow.buffer != NULL)
+    {
+        buffer = pcb->input_flow.buffer;
+
+        pcb->input_flow.buffer = buffer->next;
+
+        lwcan_buffer_delete(buffer);
+    }
+
+    while (pcb->output_flow.buffer != NULL)
+    {
+        buffer = pcb->output_flow.buffer;
+
+        pcb->output_flow.buffer = buffer->next;
+
+        lwcan_buffer_delete(buffer);
+    }
+
+    if (previous == NULL)
     {
         isotp_pcb_list = pcb->next;
     }
     else
     {
-        for (pcb_temp = isotp_pcb_list; pcb_temp != NULL; pcb_temp = pcb_temp->next)
-        {
-            if (pcb_temp->next == pcb)
-            {
-                pcb_temp->next = pcb->next;
-
-                break;
-            }
-        }
-
-        if (pcb_temp == NULL)
-        {
-            return;
-        }
+        previous->next = pcb->next;
     }
+
+    pcb->next = NULL;
 
     isotp_pcb_free(pcb);
 
     isotp_pcb_num -= 1;
+
+    return ERROR_OK;
 }
 
 lwcanerr_t isotp_set_receive_callback(struct isotp_pcb *pcb, isotp_receive_function receive)
@@ -307,12 +342,12 @@ uint8_t isotp_get_sf_dl(uint8_t *frame_data)
 
 uint32_t isotp_get_ff_dl(uint8_t *frame_data)
 {
-    uint32_t length = 0;
+    uint32_t length;
 
 #if ISOTP_CANFD
     if (frame_data[FD_FF_FLAG_OFFSET] == FD_FF_FLAG)
     {
-        length = frame_data[FD_FF_DL_OFFSET] << 24;
+        length = (uint32_t)frame_data[FD_FF_DL_OFFSET] << 24;
 
         length |= frame_data[FD_FF_DL_OFFSET + 1] << 16;
 
@@ -343,32 +378,58 @@ static uint8_t get_padding_length(uint32_t length)
 }
 #endif
 
+#if ISOTP_CANFD || ISOTP_USE_PADDING 
 static inline void add_padding(uint8_t *data, uint8_t num)
 {
     memset(data, ISOTP_PADDING_BYTE, num);
 }
+#endif
 
 void isotp_fill_sf(struct isotp_flow *flow, void *frame)
 {
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
 
-    _frame->len = get_padding_length(flow->remaining_data);
-
-    _frame->data[FRAME_TYPE_OFFSET] = SF;
-
-    _frame->data[FD_SF_DL_OFFSET] = (flow->remaining_data & FD_SF_DL_MASK);
-
-    lwcan_buffer_copy_from(flow->buffer, (_frame->data + FD_SF_DATA_OFFSET), flow->remaining_data);
-
-    if (flow->remaining_data < (uint8_t)(_frame->len - FD_SF_DATA_OFFSET))
+    if (flow->remaining_data <= (CAN_MAX_DLEN - SF_DATA_OFFSET))
     {
-        add_padding((_frame->data + FD_SF_DATA_OFFSET + flow->remaining_data), (_frame->len - (FD_SF_DATA_OFFSET + flow->remaining_data)));
+        _frame->len = get_padding_length(flow->remaining_data + SF_DATA_OFFSET);
+
+        _frame->data[FRAME_TYPE_OFFSET] = SF;
+
+        _frame->data[SF_DL_OFFSET] |= (flow->remaining_data & SF_DL_MASK);
+
+        lwcan_buffer_copy_from(flow->buffer, (_frame->data + SF_DATA_OFFSET), flow->remaining_data);
+
+#if ISOTP_USE_PADDING
+        if (flow->remaining_data < (uint8_t)(_frame->len - SF_DATA_OFFSET))
+        {
+            add_padding((_frame->data + SF_DATA_OFFSET + flow->remaining_data), (_frame->len - (SF_DATA_OFFSET + flow->remaining_data)));
+        }
+#endif
+    }
+    else
+    {
+        _frame->len = get_padding_length(flow->remaining_data + FD_SF_DATA_OFFSET);
+
+        _frame->data[FRAME_TYPE_OFFSET] = SF;
+
+        _frame->data[FD_SF_DL_OFFSET] = (flow->remaining_data & FD_SF_DL_MASK);
+
+        lwcan_buffer_copy_from(flow->buffer, (_frame->data + FD_SF_DATA_OFFSET), flow->remaining_data);
+
+        if (flow->remaining_data < (uint8_t)(_frame->len - FD_SF_DATA_OFFSET))
+        {
+            add_padding((_frame->data + FD_SF_DATA_OFFSET + flow->remaining_data), (_frame->len - (FD_SF_DATA_OFFSET + flow->remaining_data)));
+        }
     }
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
 
+#if ISOTP_USE_PADDING
     _frame->len = CAN_MAX_DLEN;
+#else
+    _frame->len = flow->remaining_data + SF_DATA_OFFSET;
+#endif
 
     _frame->data[FRAME_TYPE_OFFSET] = SF;
 
@@ -376,13 +437,16 @@ void isotp_fill_sf(struct isotp_flow *flow, void *frame)
 
     lwcan_buffer_copy_from(flow->buffer, (_frame->data + SF_DATA_OFFSET), flow->remaining_data);
 
+#if ISOTP_USE_PADDING
     if (flow->remaining_data < (uint8_t)(_frame->len - SF_DATA_OFFSET))
     {
         add_padding((_frame->data + SF_DATA_OFFSET + flow->remaining_data), (_frame->len - (SF_DATA_OFFSET + flow->remaining_data)));
     }
 #endif
 
-    flow->remaining_data -= flow->remaining_data;
+#endif /* ISOTP_CANFD */
+
+    flow->remaining_data = 0;
 }
 
 void isotp_fill_ff(struct isotp_flow *flow, void *frame)
@@ -390,23 +454,36 @@ void isotp_fill_ff(struct isotp_flow *flow, void *frame)
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
 
-    _frame->len = get_padding_length(flow->remaining_data);
+    _frame->len = get_padding_length(flow->remaining_data + FD_FF_DATA_OFFSET);
 
     _frame->data[FRAME_TYPE_OFFSET] = FF;
 
-    _frame->data[FD_FF_FLAG_OFFSET] = FD_FF_FLAG;
+    if (flow->remaining_data <= 4095)
+    {
+        _frame->data[FF_DL_HI_OFFSET] |= (uint8_t)(flow->remaining_data >> 8) & (uint8_t)FF_DL_HI_MASK;
 
-    _frame->data[FD_FF_DL_OFFSET] = (uint8_t)(flow->remaining_data >> 24) & (uint8_t)0xFF;
+        _frame->data[FF_DL_LO_OFFSET] = (uint8_t)flow->remaining_data & (uint8_t)FF_DL_LO_MASK;
 
-    _frame->data[FD_FF_DL_OFFSET + 1] = (uint8_t)(flow->remaining_data >> 16) & (uint8_t)0xFF;
+        lwcan_buffer_copy_from(flow->buffer, (_frame->data + FF_DATA_OFFSET), (_frame->len - FF_DATA_OFFSET));
 
-    _frame->data[FD_FF_DL_OFFSET + 2] = (uint8_t)(flow->remaining_data >> 8) & (uint8_t)0xFF;
+        flow->remaining_data -= (_frame->len - FF_DATA_OFFSET);
+    }
+    else
+    {
+        _frame->data[FD_FF_FLAG_OFFSET] = FD_FF_FLAG;
 
-    _frame->data[FD_FF_DL_OFFSET + 3] = (uint8_t)flow->remaining_data & (uint8_t)0xFF;
+        _frame->data[FD_FF_DL_OFFSET] = (uint8_t)(flow->remaining_data >> 24) & (uint8_t)0xFF;
 
-    lwcan_buffer_copy_from(flow->buffer, (_frame->data + FD_FF_DATA_OFFSET), (_frame->len - FD_FF_DATA_OFFSET));
+        _frame->data[FD_FF_DL_OFFSET + 1] = (uint8_t)(flow->remaining_data >> 16) & (uint8_t)0xFF;
 
-    flow->remaining_data -= (_frame->len - FD_FF_DATA_OFFSET);
+        _frame->data[FD_FF_DL_OFFSET + 2] = (uint8_t)(flow->remaining_data >> 8) & (uint8_t)0xFF;
+
+        _frame->data[FD_FF_DL_OFFSET + 3] = (uint8_t)flow->remaining_data & (uint8_t)0xFF;
+
+        lwcan_buffer_copy_from(flow->buffer, (_frame->data + FD_FF_DATA_OFFSET), (_frame->len - FD_FF_DATA_OFFSET));
+
+        flow->remaining_data -= (_frame->len - FD_FF_DATA_OFFSET);
+    }
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
 
@@ -429,12 +506,17 @@ void isotp_fill_cf(struct isotp_flow *flow, void *frame)
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
 
-    _frame->len = get_padding_length(flow->remaining_data);
+    _frame->len = get_padding_length(flow->remaining_data + CF_DATA_OFFSET);
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
 
+#if ISOTP_USE_PADDING
     _frame->len = CAN_MAX_DLEN;
+#else
+    _frame->len = flow->remaining_data >= (CAN_MAX_DLEN - CF_DATA_OFFSET) ? CAN_MAX_DLEN : flow->remaining_data + CF_DATA_OFFSET;
 #endif
+
+#endif /* ISOTP_CANFD */
 
     _frame->data[FRAME_TYPE_OFFSET] = CF;
 
@@ -444,9 +526,11 @@ void isotp_fill_cf(struct isotp_flow *flow, void *frame)
     {
         lwcan_buffer_copy_from_offset(flow->buffer, (_frame->data + CF_DATA_OFFSET), flow->remaining_data, (flow->buffer->length - flow->remaining_data));
 
+#if ISOTP_CANFD || ISOTP_USE_PADDING
         add_padding((_frame->data + flow->remaining_data + CF_DATA_OFFSET), (_frame->len - (CF_DATA_OFFSET + flow->remaining_data)));
+#endif
 
-        flow->remaining_data -= flow->remaining_data;
+        flow->remaining_data = 0;
     }
     else
     {
@@ -464,7 +548,11 @@ void isotp_fill_fc(struct isotp_flow *flow, void *frame)
     struct can_frame *_frame = (struct can_frame *)frame;
 #endif
 
+#if ISOTP_USE_PADDING
     _frame->len = CAN_MAX_DLEN;
+#else
+    _frame->len = FC_PADDING_OFFSET;
+#endif
 
     _frame->data[FRAME_TYPE_OFFSET] = FC;
 
@@ -474,10 +562,12 @@ void isotp_fill_fc(struct isotp_flow *flow, void *frame)
 
     _frame->data[FC_ST_OFFSET] = flow->st;
 
+#if ISOTP_USE_PADDING
     if (_frame->len >= FC_PADDING_OFFSET)
     {
         add_padding((_frame->data + FC_PADDING_OFFSET), (_frame->len - FC_PADDING_OFFSET));
     }
+#endif
 }
 
 void isotp_remove_buffer(struct isotp_flow *flow, struct lwcan_buffer *buffer)
@@ -552,7 +642,7 @@ void isotp_timeout_error_handler(void *arg)
 
     if (pcb->error != NULL)
     {
-        pcb->error(pcb, error);
+        pcb->error(pcb->callback_arg, error);
     }
 }
 

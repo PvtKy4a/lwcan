@@ -10,8 +10,6 @@ extern "C"
 
 void *lwcan_malloc(size_t size);
 
-void *lwcan_calloc(size_t number, size_t size);
-
 void lwcan_free(void *p);
 
 #ifdef __cplusplus

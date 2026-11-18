@@ -98,14 +98,14 @@ void test_buffer_copy_operations(void)
 
     /* Test copy with zero length */
     err = lwcan_buffer_copy_to(buffer, source, 0);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 
     err = lwcan_buffer_copy_from(buffer, destination, 0);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 
     /* Test copy with length exceeding buffer size */
     err = lwcan_buffer_copy_to(buffer, source, 101);
-    TEST_ASSERT_EQUAL(ERROR_OK, err); /* Current implementation doesn't check this */
+    TEST_ASSERT_EQUAL(ERROR_ARG, err); /* Current implementation doesn't check this */
 
     /* Cleanup */
     lwcan_buffer_delete(buffer);
@@ -174,10 +174,10 @@ void test_buffer_offset_operations(void)
 
     /* Test with zero length */
     err = lwcan_buffer_copy_to_offset(buffer, source, 0, 50);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 
     err = lwcan_buffer_copy_from_offset(buffer, destination, 0, 50);
-    TEST_ASSERT_EQUAL(ERROR_ARG, err);
+    TEST_ASSERT_EQUAL(ERROR_OK, err);
 
     /* Cleanup */
     lwcan_buffer_delete(buffer);

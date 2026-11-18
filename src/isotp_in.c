@@ -45,11 +45,11 @@ static void store_ff_data(struct isotp_flow *flow, uint8_t *data, uint8_t length
 
 static void store_cf_data(struct isotp_flow *flow, uint8_t *data, uint8_t length)
 {
-    if (flow->remaining_data < (uint8_t)(length - CF_DATA_OFFSET))
+    if (flow->remaining_data < (uint32_t)(length - CF_DATA_OFFSET))
     {
         lwcan_buffer_copy_to_offset(flow->buffer, (data + CF_DATA_OFFSET), flow->remaining_data, (flow->buffer->length - flow->remaining_data));
 
-        flow->remaining_data -= flow->remaining_data;
+        flow->remaining_data = 0;
     }
     else
     {
@@ -61,14 +61,25 @@ static void store_cf_data(struct isotp_flow *flow, uint8_t *data, uint8_t length
 
 static void received_sf(struct isotp_pcb *pcb, void *frame)
 {
-    uint8_t length;
+    uint8_t length, data_offset;
 
     struct lwcan_buffer *buffer;
 
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
+
+    if ((_frame->data[FD_SF_FLAG_OFFSET] & FD_SF_FLAG_MASK) == FD_SF_FLAG)
+    {
+        data_offset = FD_SF_DATA_OFFSET;
+    }
+    else
+    {
+        data_offset = SF_DATA_OFFSET;
+    }
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
+
+    data_offset = SF_DATA_OFFSET;
 #endif
 
     if (pcb->input_flow.state != ISOTP_IDLE)
@@ -77,6 +88,11 @@ static void received_sf(struct isotp_pcb *pcb, void *frame)
     }
 
     length = isotp_get_sf_dl(_frame->data);
+
+    if (length == 0 || length > (_frame->len - data_offset))
+    {
+        return;
+    }
 
     buffer = lwcan_buffer_new(length);
 
@@ -114,12 +130,25 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 {
     uint32_t length;
 
+    uint8_t data_offset;
+
     struct lwcan_buffer *buffer;
 
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
+
+    if ((_frame->data[FD_FF_FLAG_OFFSET] & FD_FF_FLAG_MASK) == FD_FF_FLAG)
+    {
+        data_offset = FD_FF_DATA_OFFSET;
+    }
+    else
+    {
+        data_offset = FF_DATA_OFFSET;
+    }
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
+
+    data_offset = FF_DATA_OFFSET;
 #endif
 
     if (pcb->input_flow.state != ISOTP_IDLE)
@@ -128,6 +157,11 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
     }
 
     length = isotp_get_ff_dl(_frame->data);
+
+    if (length <= (uint32_t)(_frame->len - data_offset))
+    {
+        return;
+    }
 
     buffer = lwcan_buffer_new(length);
 
@@ -186,7 +220,7 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
 
     sn = _frame->data[CF_SN_OFFSET] & CF_SN_MASK;
 
-    if (pcb->input_flow.cf_sn != sn)
+    if (pcb->input_flow.cf_sn != sn || _frame->len <= CF_DATA_OFFSET)
     {
         isotp_remove_buffer(&pcb->input_flow, pcb->input_flow.buffer);
 
@@ -247,6 +281,8 @@ static void received_cf(struct isotp_pcb *pcb, void *frame)
 
 static void received_fc(struct isotp_pcb *pcb, void *frame)
 {
+    lwcanerr_t err;
+
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
 #else
@@ -259,6 +295,13 @@ static void received_fc(struct isotp_pcb *pcb, void *frame)
     }
 
     lwcan_untimeout(&pcb->output_flow.error_timeout);
+
+    if (_frame->len < FC_PADDING_OFFSET)
+    {
+        err = ERROR_ABORTED;
+
+        goto error;
+    }
 
     pcb->output_flow.fs = _frame->data[FC_FS_OFFSET] & FC_FS_MASK;
 
@@ -273,16 +316,9 @@ static void received_fc(struct isotp_pcb *pcb, void *frame)
 
     if (pcb->output_flow.fs != FS_READY)
     {
-        isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
+        err = ERROR_ABORTED;
 
-        pcb->output_flow.state = ISOTP_IDLE;
-
-        if (pcb->error != NULL)
-        {
-            pcb->error(pcb->callback_arg, ERROR_ABORTED);
-        }
-
-        return;
+        goto error;
     }
 
     pcb->output_flow.bs = _frame->data[FC_BS_OFFSET];
@@ -297,6 +333,18 @@ static void received_fc(struct isotp_pcb *pcb, void *frame)
     pcb->output_flow.state = ISOTP_TX_CF;
 
     lwcan_timeout(&pcb->output_flow.output_timeout, 0, isotp_output, &pcb->output_flow);
+
+    return;
+
+error:
+    isotp_remove_buffer(&pcb->output_flow, pcb->output_flow.buffer);
+
+    pcb->output_flow.state = ISOTP_IDLE;
+
+    if (pcb->error != NULL)
+    {
+        pcb->error(pcb->callback_arg, err);
+    }
 }
 
 void isotp_input(struct canif *canif, void *frame)
@@ -307,9 +355,14 @@ void isotp_input(struct canif *canif, void *frame)
 
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
+    if (_frame->len == 0 || _frame->len > CANFD_MAX_DLEN)
 #else
     struct can_frame *_frame = (struct can_frame *)frame;
+    if (_frame->len == 0 || _frame->len > CAN_MAX_DLEN)
 #endif
+    {
+        return;
+    }
 
     if_index = canif_get_index(canif);
 
@@ -328,6 +381,11 @@ void isotp_input(struct canif *canif, void *frame)
     }
 
     if (pcb == NULL)
+    {
+        return;
+    }
+
+    if (_frame->can_id & (CAN_RTR_FLAG | CAN_ERR_FLAG))
     {
         return;
     }
