@@ -37,9 +37,6 @@ extern "C"
 #define FF_DL_LO_OFFSET     1       /** First frame data length lo offset */
 #define FF_DL_LO_MASK       0xFF    /** First frame data length LO mask */
 #define FF_DATA_OFFSET      2       /** First frame data offset */
-#define FD_FF_FLAG          0       /** CAN FD first frame flag */
-#define FD_FF_FLAG_OFFSET   1       /** CAN FD first frame flag offset */
-#define FD_FF_FLAG_MASK     0xFF    /** CAN FD first frame flag mask */
 #define FD_FF_DL_OFFSET     2       /** CAN FD first frame data length offset */
 #define FD_FF_DATA_OFFSET   6       /** CAN FD first frame data offset */
 

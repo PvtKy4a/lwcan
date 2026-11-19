@@ -4,6 +4,7 @@
 
 #include "lwcan/isotp.h"
 #include "lwcan/private/isotp_private.h"
+#include "lwcan/system.h"
 #include "lwcan/timeouts.h"
 #include "lwcan/debug.h"
 
@@ -87,6 +88,8 @@ struct isotp_pcb *isotp_new(void)
 {
     struct isotp_pcb *pcb;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (isotp_pcb_num >= ISOTP_MAX_PCB_NUM)
     {
         LWCAN_ASSERT("isotp_pcb_num < ISOTP_MAX_PCB_NUM", isotp_pcb_num < ISOTP_MAX_PCB_NUM);
@@ -94,10 +97,14 @@ struct isotp_pcb *isotp_new(void)
         return NULL;
     }
 
+    SYSTEM_ARCH_PROTECT(lev);
+
     pcb = (struct isotp_pcb *)isotp_pcb_malloc();
 
     if (pcb == NULL)
     {
+        SYSTEM_ARCH_UNPROTECT(lev);
+
         LWCAN_ASSERT("pcb != NULL", pcb != NULL);
 
         return NULL;
@@ -114,6 +121,8 @@ struct isotp_pcb *isotp_new(void)
     isotp_pcb_list = pcb;
 
     isotp_pcb_num += 1;
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return pcb;
 }
@@ -180,6 +189,8 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
 
     struct lwcan_buffer *buffer;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (pcb == NULL)
     {
         return ERROR_ARG;
@@ -189,6 +200,8 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
     {
         return ERROR_INPROGRESS;
     }
+
+    SYSTEM_ARCH_PROTECT(lev);
 
     for (item = isotp_pcb_list; item != NULL; item = item->next)
     {
@@ -202,6 +215,8 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
 
     if (item == NULL)
     {
+        SYSTEM_ARCH_UNPROTECT(lev);
+
         return ERROR_ARG;
     }
 
@@ -243,6 +258,8 @@ lwcanerr_t isotp_remove(struct isotp_pcb *pcb)
     isotp_pcb_free(pcb);
 
     isotp_pcb_num -= 1;
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return ERROR_OK;
 }
@@ -345,7 +362,7 @@ uint32_t isotp_get_ff_dl(uint8_t *frame_data)
     uint32_t length;
 
 #if ISOTP_CANFD
-    if (frame_data[FD_FF_FLAG_OFFSET] == FD_FF_FLAG)
+    if (((frame_data[FF_DL_HI_OFFSET] & FF_DL_HI_MASK) == 0) && (frame_data[FF_DL_LO_OFFSET] == 0))
     {
         length = (uint32_t)frame_data[FD_FF_DL_OFFSET] << 24;
 
@@ -470,7 +487,7 @@ void isotp_fill_ff(struct isotp_flow *flow, void *frame)
     }
     else
     {
-        _frame->data[FD_FF_FLAG_OFFSET] = FD_FF_FLAG;
+        _frame->data[FF_DL_LO_OFFSET] = 0;
 
         _frame->data[FD_FF_DL_OFFSET] = (uint8_t)(flow->remaining_data >> 24) & (uint8_t)0xFF;
 

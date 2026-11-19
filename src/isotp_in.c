@@ -28,7 +28,7 @@ static void store_sf_data(struct isotp_flow *flow, uint8_t *data, uint8_t length
 static void store_ff_data(struct isotp_flow *flow, uint8_t *data, uint8_t length)
 {
 #if ISOTP_CANFD
-    if ((data[FD_FF_FLAG_OFFSET] & FD_FF_FLAG_MASK) == FD_FF_FLAG)
+    if (((data[FF_DL_HI_OFFSET] & FF_DL_HI_MASK) == 0) && (data[FF_DL_LO_OFFSET] == 0))
     {
         lwcan_buffer_copy_to(flow->buffer, (data + FD_FF_DATA_OFFSET), (length - FD_FF_DATA_OFFSET));
 
@@ -137,7 +137,7 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
 #if ISOTP_CANFD
     struct canfd_frame *_frame = (struct canfd_frame *)frame;
 
-    if ((_frame->data[FD_FF_FLAG_OFFSET] & FD_FF_FLAG_MASK) == FD_FF_FLAG)
+    if (((_frame->data[FF_DL_HI_OFFSET] & FF_DL_HI_MASK) == 0) && (_frame->data[FF_DL_LO_OFFSET] == 0))
     {
         data_offset = FD_FF_DATA_OFFSET;
     }
@@ -162,6 +162,8 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
     {
         return;
     }
+
+    pcb->input_flow.state = ISOTP_TX_FC;
 
     buffer = lwcan_buffer_new(length);
 
@@ -192,8 +194,6 @@ static void received_ff(struct isotp_pcb *pcb, void *frame)
     pcb->input_flow.fs = FS_READY;
 
 output:
-    pcb->input_flow.state = ISOTP_TX_FC;
-
     pcb->input_flow.bs = ISOTP_RECEIVE_BS;
 
     pcb->input_flow.st = ISOTP_RECEIVE_ST;

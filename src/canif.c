@@ -1,5 +1,6 @@
 #include "lwcan/canif.h"
 #include "lwcan/private/canif_private.h"
+#include "lwcan/system.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/private/isotp_private.h"
@@ -48,6 +49,8 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
 
     uint8_t num_canifs;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (canif == NULL || name == NULL || strlen(name) == 0 || init == NULL)
     {
         LWCAN_ASSERT("canif != NULL", canif != NULL);
@@ -61,10 +64,14 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
         return ERROR_ARG;
     }
 
+    SYSTEM_ARCH_PROTECT(lev);
+
     for (canif_temp = canif_list; canif_temp != NULL; canif_temp = canif_temp->next)
     {
         if (canif_temp == canif)
         {
+            SYSTEM_ARCH_UNPROTECT(lev);
+
             return ERROR_CANIF;
         }
     }
@@ -79,6 +86,8 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
 
     if (init(canif) != ERROR_OK)
     {
+        SYSTEM_ARCH_UNPROTECT(lev);
+
         return ERROR_IF;
     }
 
@@ -97,6 +106,8 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
 
             if (num_canifs >= MAX_CANIF_NUM)
             {
+                SYSTEM_ARCH_UNPROTECT(lev);
+
                 return ERROR_CANIF_MAX;
             }
 
@@ -122,6 +133,8 @@ lwcanerr_t canif_add(struct canif *canif, const char *name, canif_init_function 
 
     canif_list = canif;
 
+    SYSTEM_ARCH_UNPROTECT(lev);
+
     return ERROR_OK;
 }
 
@@ -129,12 +142,16 @@ lwcanerr_t canif_remove(struct canif *canif)
 {
     struct canif *canif_temp;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (canif == NULL)
     {
         LWCAN_ASSERT("canif != NULL", canif != NULL);
 
         return ERROR_ARG;
     }
+
+    SYSTEM_ARCH_PROTECT(lev);
 
     if (canif_list == canif)
     {
@@ -152,6 +169,8 @@ lwcanerr_t canif_remove(struct canif *canif)
             }
         }
     }
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return ERROR_OK;
 }
@@ -205,6 +224,10 @@ struct canif *canif_get_by_name(const char *name)
         return NULL;
     }
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
+    SYSTEM_ARCH_PROTECT(lev);
+
     for (canif = canif_list; canif != NULL; canif = canif->next)
     {
         if (strcmp(canif->name, name) == 0)
@@ -212,6 +235,8 @@ struct canif *canif_get_by_name(const char *name)
             break;
         }
     }
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return canif;
 }
@@ -251,6 +276,10 @@ struct canif *canif_get_by_index(uint8_t index)
         return NULL;
     }
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
+    SYSTEM_ARCH_PROTECT(lev);
+
     for (canif = canif_list; canif != NULL; canif = canif->next)
     {
         if (index == canif_get_index(canif))
@@ -258,6 +287,8 @@ struct canif *canif_get_by_index(uint8_t index)
             break;
         }
     }
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return canif;
 }

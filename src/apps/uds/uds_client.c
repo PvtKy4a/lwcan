@@ -77,6 +77,11 @@ static void connect_try(void *arg)
 
     (void)arg;
 
+    if (uds_state.state != UDS_CONNECTING)
+    {
+        return;
+    }
+
     if (!uds_state.is_connected && uds_state.connect_try_num == 0)
     {
         uds_state.state = UDS_IDLE;
@@ -103,6 +108,24 @@ static void connect_try(void *arg)
     }
 }
 
+static inline void set_connect_try_timeout(void)
+{
+    uint32_t connect_passed_time, connect_timeout;
+
+    connect_passed_time = system_now() - uds_state.connect_try_time;
+
+    if (connect_passed_time >= UDS_CONNECT_RETRY_TIMEOUT)
+    {
+        connect_timeout = 0;
+    }
+    else
+    {
+        connect_timeout = UDS_CONNECT_RETRY_TIMEOUT - connect_passed_time;
+    }
+
+    lwcan_timeout(&uds_state.connect_timeout, connect_timeout, connect_try, NULL);
+}
+
 static void s3_timer_handler(void *arg)
 {
     (void)arg;
@@ -125,24 +148,11 @@ static void s3_timer_handler(void *arg)
 
 static void p2_timer_handler(void *arg)
 {
-    uint32_t connect_passed_time, connect_timeout;
-
     (void)arg;
 
     if (uds_state.state == UDS_CONNECTING)
     {
-        connect_passed_time = system_now() - uds_state.connect_try_time;
-
-        if (connect_passed_time >= UDS_CONNECT_RETRY_TIMEOUT)
-        {
-            connect_timeout = 0;
-        }
-        else
-        {
-            connect_timeout = UDS_CONNECT_RETRY_TIMEOUT - connect_passed_time;
-        }
-
-        lwcan_timeout(&uds_state.connect_timeout, connect_timeout, connect_try, NULL);
+        set_connect_try_timeout();
 
         return;
     }
@@ -171,7 +181,16 @@ static void handle_negative_response(struct lwcan_buffer *buffer)
 {
     if (uds_state.state == UDS_CONNECTING)
     {
+        if (buffer->payload[UDS_REJECTED_SID_OFFSET] != UDS_TESTER_PRESENT_SID)
+        {
+            set_connect_try_timeout();
+
+            return;
+        }
+
         uds_state.state = UDS_IDLE;
+
+        lwcan_untimeout(&uds_state.connect_timeout);
 
         uds_state.connect_cb(uds_state.connect_cb_arg, ERROR_ABORTED);
 
@@ -202,7 +221,16 @@ static void handle_positive_response(struct lwcan_buffer *buffer)
 {
     if (uds_state.state == UDS_CONNECTING)
     {
+        if (buffer->payload[UDS_SID_OFFSET] != (UDS_TESTER_PRESENT_SID + 0x40))
+        {
+            set_connect_try_timeout();
+
+            return;
+        }
+
         uds_state.state = UDS_IDLE;
+
+        lwcan_untimeout(&uds_state.connect_timeout);
 
         uds_state.is_connected = 1;
 
@@ -305,24 +333,11 @@ static void uds_receive_ff(void *arg, struct isotp_pcb *isotp_pcb)
 
 static void uds_error(void *arg, lwcanerr_t error)
 {
-    uint32_t connect_passed_time, connect_timeout;
-
     (void)arg;
 
     if (uds_state.state == UDS_CONNECTING)
     {
-        connect_passed_time = system_now() - uds_state.connect_try_time;
-
-        if (connect_passed_time >= UDS_CONNECT_RETRY_TIMEOUT)
-        {
-            connect_timeout = 0;
-        }
-        else
-        {
-            connect_timeout = UDS_CONNECT_RETRY_TIMEOUT - connect_passed_time;
-        }
-
-        lwcan_timeout(&uds_state.connect_timeout, connect_timeout, connect_try, NULL);
+        set_connect_try_timeout();
 
         return;
     }
@@ -469,7 +484,7 @@ lwcanerr_t uds_client_connect(const struct addr_can *addr, connect_cb_function c
         return ERROR_ARG;
     }
 
-    if (uds_state.state != UDS_IDLE)
+    if (uds_state.state != UDS_IDLE || uds_state.is_connected)
     {
         return ERROR_INPROGRESS;
     }
@@ -506,6 +521,8 @@ void uds_client_disconnect(void)
     }
 
     uds_state.state = UDS_IDLE;
+
+    lwcan_untimeout(&uds_state.connect_timeout);
 
     lwcan_untimeout(&uds_state.p2_timeout);
 

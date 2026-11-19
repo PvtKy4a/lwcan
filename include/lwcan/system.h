@@ -15,12 +15,11 @@ extern "C"
 #define system_thread_new(n,t,a,s,p)
 
 #define system_msleep(t)
-
 #define system_wakeup(t)
 
-#define system_arch_protect()
-
-#define system_arch_unprotect(p)
+#define SYSTEM_ARCH_DECL_PROTECT(lev)
+#define SYSTEM_ARCH_PROTECT(lev)
+#define SYSTEM_ARCH_UNPROTECT(lev)
 
 #else
 
@@ -45,6 +44,40 @@ typedef void (*lwcan_thread_fn)(void *arg);
  * @param stacksize stack size in bytes for the new thread (may be ignored by ports)
  * @param prio priority of the new thread (may be ignored by ports) */
 system_thread_t system_thread_new(const char *name, lwcan_thread_fn thread, void *arg, int stacksize, int prio);
+
+/**
+ * @ingroup system_prot
+ * SYSTEM_ARCH_DECL_PROTECT
+ * declare a protection variable. This macro will default to defining a variable of
+ * type system_prot_t. If a particular port needs a different implementation, then
+ * this macro may be defined in system_arch.h.
+ */
+#define SYSTEM_ARCH_DECL_PROTECT(lev) system_prot_t lev
+
+/**
+ * @ingroup system_prot
+ * SYSTEM_ARCH_PROTECT
+ * Perform a "fast" protect. This could be implemented by
+ * disabling interrupts for an embedded systemtem or by using a semaphore or
+ * mutex. The implementation should allow calling SYSTEM_ARCH_PROTECT when
+ * already protected. The old protection level is returned in the variable
+ * "lev". This macro will default to calling the system_arch_protect() function
+ * which should be implemented in system_arch.c. If a particular port needs a
+ * different implementation, then this macro may be defined in system_arch.h
+ */
+#define SYSTEM_ARCH_PROTECT(lev) lev = system_arch_protect()
+
+/**
+ * @ingroup system_prot
+ * SYSTEM_ARCH_UNPROTECT
+ * Perform a "fast" set of the protection level to "lev". This could be
+ * implemented by setting the interrupt level to "lev" within the MACRO or by
+ * using a semaphore or mutex.  This macro will default to calling the
+ * system_arch_unprotect() function which should be implemented in
+ * system_arch.c. If a particular port needs a different implementation, then
+ * this macro may be defined in system_arch.h
+ */
+#define SYSTEM_ARCH_UNPROTECT(lev) system_arch_unprotect(lev)
 
 system_prot_t system_arch_protect(void);
 

@@ -74,6 +74,8 @@ struct canraw_pcb *canraw_new(void)
 {
     struct canraw_pcb *pcb;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (canraw_pcb_num >= CANRAW_MAX_PCB_NUM)
     {
         LWCAN_ASSERT("canraw_pcb_num < CANRAW_MAX_PCB_NUM", canraw_pcb_num < CANRAW_MAX_PCB_NUM);
@@ -81,10 +83,14 @@ struct canraw_pcb *canraw_new(void)
         return NULL;
     }
 
+    SYSTEM_ARCH_PROTECT(lev);
+
     pcb = (struct canraw_pcb *)canraw_pcb_malloc();
 
     if (pcb == NULL)
     {
+        SYSTEM_ARCH_UNPROTECT(lev);
+
         LWCAN_ASSERT("pcb != NULL", pcb != NULL);
 
         return NULL;
@@ -97,6 +103,8 @@ struct canraw_pcb *canraw_new(void)
     canraw_pcb_list = pcb;
 
     canraw_pcb_num += 1;
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 
     return pcb;
 
@@ -126,10 +134,14 @@ void canraw_remove(struct canraw_pcb *pcb)
 {
     struct canraw_pcb *pcb_temp;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (pcb == NULL)
     {
         return;
     }
+
+    SYSTEM_ARCH_PROTECT(lev);
 
     if (canraw_pcb_list == pcb)
     {
@@ -149,6 +161,8 @@ void canraw_remove(struct canraw_pcb *pcb)
 
         if (pcb_temp == NULL)
         {
+            SYSTEM_ARCH_UNPROTECT(lev);
+
             return;
         }
     }
@@ -156,13 +170,13 @@ void canraw_remove(struct canraw_pcb *pcb)
     canraw_pcb_free(pcb);
 
     canraw_pcb_num -= 1;
+
+    SYSTEM_ARCH_UNPROTECT(lev);
 }
 
 canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 {
     struct canraw_pcb *pcb;
-
-    struct canraw_pcb *prev;
 
     uint8_t if_index;
 
@@ -170,14 +184,10 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
 
     pcb = canraw_pcb_list;
 
-    prev = NULL;
-
     while (pcb != NULL)
     {
         if (pcb->if_index != if_index)
         {
-            prev = pcb;
-
             pcb = pcb->next;
         }
         else
@@ -185,16 +195,6 @@ canraw_input_state_t canraw_input(struct canif *canif, void *frame)
             if (pcb->receive == NULL || pcb->receive(pcb->callback_arg, pcb, frame) == 0)
             {
                 break;
-            }
-
-            if (prev != NULL)
-            {
-                /* move the pcb to the front of canraw_pcb_list so that is found faster next time */
-                prev->next = pcb->next;
-
-                pcb->next = canraw_pcb_list;
-
-                canraw_pcb_list = pcb;
             }
 
             return RAW_INPUT_EATEN;
@@ -235,7 +235,7 @@ lwcanerr_t canraw_send(struct canraw_pcb *pcb, void *frame, uint8_t frame_size, 
 
     canif = canif_get_by_index(pcb->if_index);
 
-    if (canif == NULL)
+    if (canif == NULL || canif->output == NULL)
     {
         ret = ERROR_CANIF;
 

@@ -42,9 +42,6 @@ static inline void timeout_add(struct lwcan_timeout *timeout)
     {
         next_timeout = timeout;
 
-#if !LWCAN_NO_SYSTEM
-        system_wakeup(&lwcan_thread);
-#endif
         return;
     }
 
@@ -114,19 +111,27 @@ uint32_t lwcan_timeouts_handler(void)
 
     void *arg;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     now = system_now();
 
     do
     {
+        SYSTEM_ARCH_PROTECT(lev);
+
         timeout = next_timeout;
 
         if (timeout == NULL)
         {
+            SYSTEM_ARCH_UNPROTECT(lev);
+
             return MAX_TIMEOUT;
         }
 
         if (TIME_LESS_THAN(now, timeout->time))
         {
+            SYSTEM_ARCH_UNPROTECT(lev);
+
             return (uint32_t)(timeout->time - now);
         }
 
@@ -135,6 +140,8 @@ uint32_t lwcan_timeouts_handler(void)
         handler = timeout->handler;
 
         arg = timeout->arg;
+
+        SYSTEM_ARCH_UNPROTECT(lev);
 
         if (handler != NULL)
         {
@@ -154,6 +161,10 @@ void lwcan_timeout(struct lwcan_timeout *timeout, uint32_t time_ms, lwcan_timeou
         return;
     }
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
+    SYSTEM_ARCH_PROTECT(lev);
+
     timeout_remove(timeout);
 
     timeout->next = NULL;
@@ -163,16 +174,20 @@ void lwcan_timeout(struct lwcan_timeout *timeout, uint32_t time_ms, lwcan_timeou
 
     timeout_add(timeout);
 
-#if !LWCAN_NO_SYSTEM
+    SYSTEM_ARCH_UNPROTECT(lev);
+
     system_wakeup(&lwcan_thread);
-#endif
 }
 
 void lwcan_untimeout(struct lwcan_timeout *timeout)
 {
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
+    SYSTEM_ARCH_PROTECT(lev);
+
     timeout_remove(timeout);
 
-#if !LWCAN_NO_SYSTEM
+    SYSTEM_ARCH_UNPROTECT(lev);
+
     system_wakeup(&lwcan_thread);
-#endif
 }

@@ -1,5 +1,6 @@
 #include "lwcan/memory.h"
 #include "lwcan/private/memory_private.h"
+#include "lwcan/system.h"
 #include "lwcan/error.h"
 #include "lwcan/options.h"
 #include "lwcan/debug.h"
@@ -61,6 +62,7 @@ void *lwcan_malloc(size_t size)
 {
     BlockLink_t *pxBlock, *pxPreviousBlock, *pxNewBlockLink;
     void *pvReturn = NULL;
+    SYSTEM_ARCH_DECL_PROTECT(lev);
 
     {
         /* requires a prior call to memory_init() */
@@ -70,6 +72,8 @@ void *lwcan_malloc(size_t size)
 
             return pvReturn;
         }
+
+        SYSTEM_ARCH_PROTECT(lev);
 
         /* Check the requested block size is not so large that the top bit is
          * set.  The top bit of the block size member of the BlockLink_t structure
@@ -167,6 +171,8 @@ void *lwcan_malloc(size_t size)
 
     }
 
+    SYSTEM_ARCH_UNPROTECT(lev);
+
     LWCAN_ASSERT("(((size_t)pvReturn) & (size_t)MEMORY_BYTE_ALIGNMENT_MASK) == 0", (((size_t)pvReturn) & (size_t)MEMORY_BYTE_ALIGNMENT_MASK) == 0);
 
     return pvReturn;
@@ -179,8 +185,12 @@ void lwcan_free(void *p)
 
     BlockLink_t *pxLink;
 
+    SYSTEM_ARCH_DECL_PROTECT(lev);
+
     if (p != NULL)
     {
+        SYSTEM_ARCH_PROTECT(lev);
+
         /* The memory being freed will have an BlockLink_t structure immediately
          * before it. */
         puc -= xHeapStructSize;
@@ -212,6 +222,8 @@ void lwcan_free(void *p)
                 }
             }
         }
+
+        SYSTEM_ARCH_UNPROTECT(lev);
     }
 }
 /*-----------------------------------------------------------*/
